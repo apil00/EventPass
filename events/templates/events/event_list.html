@@ -1,0 +1,606 @@
+<!-- event_list.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Browse Events - EventPass</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6f42c1;
+            --primary-light: #f3effb;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            padding-bottom: 70px;
+        }
+
+        .navbar {
+            background-color: #fff;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .navbar .fw-bold {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: red;
+            color: white;
+            font-size: 12px;
+            border-radius: 50%;
+            padding: 2px 5px;
+        }
+
+        .icon-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-group>div {
+            margin-left: 20px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .bottom-nav a {
+            text-decoration: none;
+            color: #6c757d;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .bottom-nav a.active {
+            color: #6f42c1;
+        }
+
+        .bottom-nav i {
+            font-size: 20px;
+        }
+
+        /* Event Cards */
+        .event-card {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+            margin-bottom: 20px;
+        }
+
+        .event-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .event-img {
+            height: 180px;
+            width: 100%;
+            object-fit: contain;
+            position: relative;
+        }
+
+        .event-date-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .event-category {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--primary);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .card-body {
+            padding: 16px;
+        }
+
+        .event-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #333;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .event-location {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .event-price {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 16px;
+        }
+
+        .event-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        .event-status-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .btn-book {
+            background: var(--primary);
+            border: none;
+            font-weight: 500;
+            font-size: 13px;
+            padding: 6px 14px;
+            border-radius: 6px;
+        }
+
+        .btn-book:hover {
+            background-color: #5b089f;
+        }
+
+        /* Modal Styles */
+        .modal-header {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .modal-title {
+            font-weight: 700;
+            font-size: 22px;
+        }
+
+        .modal-body {
+            padding-top: 0;
+        }
+
+        .event-detail-item {
+            margin-bottom: 16px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            font-size: 15px;
+        }
+
+        .event-description {
+            background: var(--primary-light);
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .modal-footer {
+            border-top: none;
+            padding-top: 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .btn-modal-book {
+            background: var(--primary);
+            border: none;
+            font-weight: 600;
+            padding: 10px 24px;
+            border-radius: 8px;
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+
+        .btn-modal-book:hover {
+            background-color: #5b089f;
+        }
+
+        .btn-modal-close {
+            border: 1px solid #ddd;
+            font-weight: 500;
+            padding: 10px 24px;
+            border-radius: 8px;
+        }
+
+        /* Filter Buttons */
+        .filter-btns .btn {
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 13px;
+            margin-right: 8px;
+            margin-bottom: 10px;
+            border-width: 1.5px;
+        }
+
+        .filter-btns .btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Your Exact Navbar -->
+    <nav class="navbar navbar-light px-3 sticky-top shadow-sm">
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-ticket-fill text-primary fs-3 me-2"></i>
+                <span class="fw-bold fs-5">EventPass</span>
+            </div>
+
+            <!-- Notifications & Profile Icons -->
+            <div class="d-flex align-items-center icon-group">
+                <!-- Notifications -->
+                <div class="dropdown">
+                    <a class="icon-circle position-relative" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-bell text-dark fs-5"></i>
+                        {% if notifications|length > 0 %}
+                        <span class="notification-badge">{{ notifications|length }}</span>
+                        {% endif %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        {% for notif in notifications %}
+                        <li>
+                            <a class="dropdown-item{% if not notif.is_read %} fw-bold{% endif %}"
+                                href="{{ notif.url|default:'#' }}">
+                                {{ notif.message }}
+                                <br>
+                                <small class="text-muted">{{ notif.created_at|date:"M d, Y H:i" }}</small>
+                            </a>
+                        </li>
+                        {% empty %}
+                        <li><span class="dropdown-item text-muted">No notifications</span></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Profile -->
+                <div class="dropdown">
+                    <a class="icon-circle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-fill text-dark fs-5"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#">Profile</a></li>
+                        <li><a class="dropdown-item" href="#">Settings</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item text-danger" href="#">Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <h5 class="mb-3 fw-semibold">🎫 Browse Events</h5>
+
+        <!-- Filter Buttons -->
+        <div class="filter-btns mb-4">
+            <button class="btn btn-outline-primary active">All</button>
+            <button class="btn btn-outline-primary">Music</button>
+            <button class="btn btn-outline-primary">Tech</button>
+            <button class="btn btn-outline-primary">Art</button>
+            <button class="btn btn-outline-primary">Food</button>
+            <button class="btn btn-outline-primary">Sports</button>
+        </div>
+
+        <!-- Upcoming Events Section -->
+        {% if upcoming_events %}
+        <div class="mb-5">
+            <h5 class="fw-semibold mb-3 section-header">
+                🔜 Upcoming Events
+            <span class="badge bg-primary">{{ upcoming_events.count }}</span>
+            </h5>
+            <div class="row">
+                {% for event in upcoming_events %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="event-card">
+                        <div class="position-relative">
+                            {% if event.image %}
+                            <img src="{{ event.image.url }}" class="event-img" alt="{{ event.name }}">
+                            {% else %}
+                            <img src="https://source.unsplash.com/random/600x400/?{{ event.category }}"
+                                class="event-img" alt="{{ event.name }}">
+                            {% endif %}
+                            <div class="event-date-badge">{{ event.start_date_time|date:"M d" }}</div>
+                            <div class="event-category">{{ event.get_category_display }}</div>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="event-title">{{ event.name }}</h5>
+                            <div class="event-location">
+                                <i class="bi bi-geo-alt"></i>
+                                <span>{{ event.location }}</span>
+                            </div>
+                            <div class="event-footer">
+                                <div>
+                                    <span class="event-price">
+                                        {% if event.is_free %}
+                                        Free
+                                        {% else %}
+                                        {{ event.get_price_display }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <span class="event-status-badge bg-primary text-white">
+                                    Upcoming
+                                </span>
+                            </div>
+                            <button class="btn btn-book w-100 mt-3 text-white" data-bs-toggle="modal"
+                                data-bs-target="#detailsModal{{ event.id }}">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Live & Past Events Section -->
+        {% if live_ended_events %}
+        <div class="mb-5">
+            <h5 class="fw-semibold mb-3 section-header">🎪 Live & Past Events</h5>
+            <div class="row">
+                {% for event in live_ended_events %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="event-card">
+                        <div class="position-relative">
+                            {% if event.image %}
+                            <img src="{{ event.image.url }}" class="event-img" alt="{{ event.name }}">
+                            {% else %}
+                            <img src="https://source.unsplash.com/random/600x400/?{{ event.category }}"
+                                class="event-img" alt="{{ event.name }}">
+                            {% endif %}
+                            <div class="event-date-badge">{{ event.start_date_time|date:"M d" }}</div>
+                            <div class="event-category">{{ event.get_category_display }}</div>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="event-title">{{ event.name }}</h5>
+                            <div class="event-location">
+                                <i class="bi bi-geo-alt"></i>
+                                <span>{{ event.location }}</span>
+                            </div>
+                            <div class="event-footer">
+                                <div>
+                                    <span class="event-price">
+                                        {% if event.is_free %}
+                                        Free
+                                        {% else %}
+                                        {{ event.get_price_display }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <span class="event-status-badge 
+                  {% if event.get_status == 'Live' %}bg-success
+                  {% elif event.get_status == 'Ended' %}bg-secondary
+                  {% else %}bg-warning{% endif %} text-white">
+                                    {{ event.get_status }}
+                                </span>
+                            </div>
+                            <button class="btn btn-book w-100 mt-3 text-white" data-bs-toggle="modal"
+                                data-bs-target="#detailsModal{{ event.id }}">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- No events message -->
+        {% if not upcoming_events and not live_ended_events %}
+        <div id="no-events-message" class="text-center py-5">
+            <i class="bi bi-x-octagon display-4 text-muted"></i>
+            <h5 class="mt-2">No events found</h5>
+        </div>
+        {% endif %}
+
+        <!-- Modals -->
+        {% for event in events %}
+        <div class="modal fade" id="detailsModal{{ event.id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ event.name }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="event-detail-item">
+                            <div class="detail-label"><i class="bi bi-calendar-event me-2"></i>Date & Time</div>
+                            <div class="detail-value">
+                                {{ event.start_date_time|date:"F d, Y" }} • {{ event.start_date_time|time:"g:i A" }} -
+                                {{ event.end_date_time|time:"g:i A" }}
+                            </div>
+                        </div>
+
+                        <div class="event-detail-item">
+                            <div class="detail-label"><i class="bi bi-geo-alt me-2"></i>Location</div>
+                            <div class="detail-value">{{ event.location }}</div>
+                        </div>
+
+                        <div class="event-detail-item">
+                            <div class="detail-label"><i class="bi bi-tag me-2"></i>Category</div>
+                            <div class="detail-value">{{ event.get_category_display }}</div>
+                        </div>
+
+                        <div class="event-detail-item">
+                            <div class="detail-label"><i class="bi bi-cash-coin me-2"></i>Ticket Price</div>
+                            <div class="detail-value">
+                                {% if event.is_free %}
+                                <strong>Free Entry</strong>
+                                {% else %}
+                                {% for tier, price in event.get_price_tiers %}
+                                <strong>{{ tier }}:</strong>
+                                {% if price == 0 %}Free{% else %}Rs. {{ price }}{% endif %}
+                                {% if not forloop.last %}<br>{% endif %}
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="event-description">
+                            {{ event.description|safe }}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        {% if event.is_free or event.get_status == 'Ended' or event.get_status == 'Live' %}
+                        <a class="btn btn-modal-book text-white disabled" aria-disabled="true"
+                            style="pointer-events: none; cursor: not-allowed;">
+                            {% if event.is_free %}
+                            Free Entry
+                            {% else %}
+                            Book Now
+                            {% endif %}
+                        </a>
+                        {% else %}
+                        <a href="{% url 'ticket_booking' event.id %}" class="btn btn-modal-book text-white">
+                            Book Now
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="{% url 'user_dashboard' %}">
+            <i class="bi bi-house-door"></i>
+            <span>Home</span>
+        </a>
+        <a href="{% url 'event_list' %}" class="active">
+            <i class="bi bi-calendar-event"></i>
+            <span>Events</span>
+        </a>
+        <a href="{% url 'my_tickets' %}">
+            <i class="bi bi-ticket-perforated"></i>
+            <span>Tickets</span>
+        </a>
+        <a href="{% url 'capture_face' %}">
+            <i class="bi bi-camera"></i>
+            <span>Face Reg.</span>
+        </a>
+        <a href="{% url 'view_profile' %}">
+            <i class="bi bi-person"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Get the "No Events" message element (if exists)
+        const noEventsMessage = document.getElementById('no-events-message');
+
+        // Activate filter buttons and filter events
+        document.querySelectorAll('.filter-btns .btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const selectedCategory = btn.textContent.trim().toLowerCase();
+
+                // Update active button
+                document.querySelectorAll('.filter-btns .btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Get all event cards
+                const cards = document.querySelectorAll('.event-card');
+                let anyVisible = false;
+
+                cards.forEach(card => {
+                    const categoryElement = card.querySelector('.event-category');
+                    const categoryText = categoryElement ? categoryElement.textContent.trim().toLowerCase() : '';
+
+                    if (selectedCategory === 'all' || categoryText === selectedCategory) {
+                        card.style.display = 'block';
+                        anyVisible = true;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+
+                // Show "No events found" message if needed
+                if (selectedCategory !== 'all' && !anyVisible && noEventsMessage) {
+                    noEventsMessage.classList.remove('d-none');
+                } else if (noEventsMessage) {
+                    noEventsMessage.classList.add('d-none');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

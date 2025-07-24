@@ -1,0 +1,51 @@
+<!-- esewa_payment.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirecting to eSewa...</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+            padding: 50px 20px;
+        }
+        .spinner {
+            margin: 30px auto;
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #6f42c1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>Redirecting to eSewa Payment Gateway...</h3>
+        <div class="spinner"></div>
+        <p>Please wait while we process your payment.</p>
+        <p class="text-muted">Do not refresh or close this page.</p>
+    </div>
+
+    <!-- Hidden eSewa Payment Form -->
+    <form id="esewaForm" method="POST" action="{{ esewa_url }}">
+        {% for key, value in payment_data.items %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endfor %}
+    </form>
+
+    <script type="text/javascript">
+        // Auto-submit form on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('esewaForm').submit();
+        });
+    </script>
+</body>
+</html>

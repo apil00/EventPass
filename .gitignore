@@ -1,0 +1,31 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+db.sqlite3
+media/
+.env
+.env.local
+.venv/
+/local_settings.py
+
+# PostgreSQL 
+*.pid
+*.dump
+pg_data/
+
+# Virtualenv
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Static/Cache
+staticfiles/
+*.cache

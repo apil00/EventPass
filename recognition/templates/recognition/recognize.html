@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Check-In</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root {
+            --primary: #6C5CE7;
+            --primary-dark: #5649C0;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --light-gray: #f8f9fa;
+        }
+
+        body {
+            background-color: #f5f5f5;
+        }
+
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background: white !important;
+        }
+
+        .mode-container {
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #video,
+        #qr-reader {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .camera-controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        .result-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        #entry-status {
+            margin-bottom: 15px;
+        }
+
+        .loading-spinner {
+            display: none;
+            margin-left: 10px;
+        }
+
+        .error-details {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #fff8f8;
+            border-radius: 5px;
+            border-left: 4px solid var(--danger);
+        }
+
+        /* New UI Improvements */
+        .user-photo-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .user-image {
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid var(--primary);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            margin-bottom: 10px;
+        }
+
+        .event-details-section h5,
+        .ticket-section h5 {
+            color: var(--primary-dark);
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-ticket-alt me-2"></i>EventPass | <span class="ms-auto fw-bold text-muted">{{ event_name }}</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1 class="mb-4">Event Check-In</h1>
+        <div class="row">
+            <div class="col-md-6">
+                <!-- Mode Container (Video or QR) -->
+                <div class="mode-container">
+                    <video id="video" autoplay playsinline></video>
+                    <div id="qr-reader" style="display: none;"></div>
+                </div>
+
+                <!-- Face Recognition Controls -->
+                <div id="face-controls" class="camera-controls">
+                    <button id="capture" class="btn btn-primary">
+                        <i class="fas fa-camera me-2"></i>Recognize Face
+                    </button>
+                    <div id="face-loading" class="spinner-border spinner-border-sm text-primary loading-spinner"></div>
+                </div>
+
+                <!-- QR Fallback Controls -->
+                <div id="qr-fallback" style="display: none;" class="camera-controls">
+                    <button id="back-to-face" class="btn btn-primary">
+                        <i class="fas fa-redo me-2"></i>Try Face Again
+                    </button>
+                    <div id="qr-loading" class="spinner-border spinner-border-sm text-warning loading-spinner"></div>
+                </div>
+
+                <!-- Status Messages -->
+                <div id="face-error" class="alert alert-warning mt-3" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="face-error-message"></span>
+                </div>
+                <p id="qr-message" class="status-text"></p>
+                <p id="message" class="status-text"></p>
+            </div>
+
+            <div class="col-md-6">
+                <div id="result-container" class="result-container" style="display: none;">
+                    <div id="entry-status" class="alert"></div>
+
+                    <div id="success-details" style="display: none;">
+                        <div class="welcome-section">
+                            <div class="alert alert-success mb-3" id="welcome-alert">
+                                <h4 class="mb-0">Welcome to the Event, <strong id="user-full-name"></strong>!</h4>
+                            </div>
+
+                            <div class="user-photo-container text-center mb-3">
+                                <!-- Single image element for all cases -->
+                                <img id="user-image" src="" alt="User Image"
+                                    class="img-fluid rounded-circle border border-3 border-primary"
+                                    style="width: 200px; height: 200px; object-fit: cover; display: none;">
+                            </div>
+
+                            <p class="detail-item">
+                                <i class="fas fa-envelope me-2"></i>
+                                <span id="user-email" class="fw-bold"></span>
+                            </p>
+                        </div>
+
+                        <hr>
+
+                        <div class="event-details-section">
+                            <h5 class="mb-3"><i class="fas fa-calendar-alt me-2"></i>Event Details</h5>
+                            <p class="detail-item"><strong>Name:</strong> <span id="event-name"></span></p>
+                            <p class="detail-item"><strong>Date:</strong> <span id="event-date"></span></p>
+                            <p class="detail-item"><strong>Location:</strong> <span id="event-location"></span></p>
+                        </div>
+
+                        <hr>
+
+                        <div class="ticket-section">
+                            <h5 class="mb-3"><i class="fas fa-ticket-alt me-2"></i>Ticket Status</h5>
+                            <p id="ticket-status" class="fw-bold badge bg-success fs-6"></p>
+                        </div>
+                    </div>
+
+                    <div id="error-details" class="error-details" style="display: none;">
+                        <h5><i class="fas fa-times-circle me-2 text-danger"></i>Check-In Failed</h5>
+                        <p id="error-message"></p>
+                        <button id="try-qr" class="btn btn-warning mt-2">
+                            <i class="fas fa-qrcode me-2"></i>Try QR Code Instead
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // DOM Elements
+            const video = document.getElementById('video');
+            const qrReader = document.getElementById('qr-reader');
+            const canvas = document.createElement('canvas');
+            const faceControls = document.getElementById('face-controls');
+            const qrFallback = document.getElementById('qr-fallback');
+            const faceError = document.getElementById('face-error');
+            const faceErrorMessage = document.getElementById('face-error-message');
+            const message = document.getElementById('message');
+            const resultContainer = document.getElementById('result-container');
+            const successDetails = document.getElementById('success-details');
+            const errorDetails = document.getElementById('error-details');
+            const errorMessage = document.getElementById('error-message');
+            const userFullName = document.getElementById('user-full-name');
+            const userEmail = document.getElementById('user-email');
+            const eventName = document.getElementById('event-name');
+            const eventDate = document.getElementById('event-date');
+            const eventLocation = document.getElementById('event-location');
+            const ticketStatus = document.getElementById('ticket-status');
+            const entryStatus = document.getElementById('entry-status');
+            const qrMessage = document.getElementById('qr-message');
+            const faceLoading = document.getElementById('face-loading');
+            const qrLoading = document.getElementById('qr-loading');
+            const tryQrBtn = document.getElementById('try-qr');
+            const userImage = document.getElementById('user-image');
+
+            // State variables
+            let webcamStream = null;
+            let html5QrCode = null;
+            const eventId = "{{ event_id }}";
+
+            // Initialize webcam
+            async function startWebcam() {
+                try {
+                    faceLoading.style.display = 'inline-block';
+
+                    // Stop existing stream if any
+                    if (webcamStream) {
+                        webcamStream.getTracks().forEach(track => track.stop());
+                    }
+
+                    // Start new stream
+                    webcamStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        }
+                    });
+
+                    video.srcObject = webcamStream;
+                    faceError.style.display = 'none';
+                    return true;
+                } catch (err) {
+                    console.error("Webcam error:", err);
+                    faceErrorMessage.textContent = "Camera error: " + err.message;
+                    faceError.style.display = 'block';
+                    return false;
+                } finally {
+                    faceLoading.style.display = 'none';
+                }
+            }
+
+            // Stop webcam
+            function stopWebcam() {
+                if (webcamStream) {
+                    webcamStream.getTracks().forEach(track => track.stop());
+                    webcamStream = null;
+                }
+                video.srcObject = null;
+            }
+
+            // Switch to QR Scanner mode
+            async function showQRScanner() {
+                try {
+                    qrLoading.style.display = 'inline-block';
+
+                    // Clear face recognition errors
+                    faceError.style.display = 'none';
+                    message.textContent = '';
+                    message.style.color = 'inherit';
+
+                    // Stop webcam
+                    stopWebcam();
+
+                    // Hide video, show QR
+                    video.style.display = 'none';
+                    qrReader.style.display = 'block';
+
+                    // Switch controls
+                    faceControls.style.display = 'none';
+                    qrFallback.style.display = 'flex';
+                    faceError.style.display = 'none';
+
+                    // Initialize QR scanner
+                    if (!html5QrCode) {
+                        html5QrCode = new Html5Qrcode("qr-reader");
+                    }
+
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        { fps: 10, qrbox: 250 },
+                        async qrCodeMessage => {
+                            try {
+                                qrLoading.style.display = 'inline-block';
+                                qrMessage.textContent = "Validating ticket...";
+                                qrMessage.style.color = 'inherit';
+
+                                await html5QrCode.stop();
+
+                                const response = await $.ajax({
+                                    url: '{% url "qr_checkin" %}',
+                                    type: 'POST',
+                                    data: {
+                                        qr_code: qrCodeMessage,
+                                        event_id: eventId,
+                                        csrfmiddlewaretoken: '{{ csrf_token }}'
+                                    }
+                                });
+
+                                qrMessage.textContent = response.message;
+                                qrMessage.style.color = response.status === 'success' ? 'green' : 'red';
+
+                                if (response.status === 'success') {
+                                    showSuccessResult(response);
+                                } else {
+                                    showErrorResult(response.message);
+                                }
+                            } finally {
+                                qrLoading.style.display = 'none';
+                            }
+                        },
+                        errorMessage => console.log("QR scan error:", errorMessage)
+                    );
+                } catch (error) {
+                    console.error("QR scanner error:", error);
+                    qrMessage.textContent = "Failed to start QR scanner";
+                    qrMessage.style.color = 'red';
+                } finally {
+                    qrLoading.style.display = 'none';
+                }
+            }
+
+            // Switch back to Face Recognition mode
+            async function showFaceRecognition() {
+                try {
+                    faceLoading.style.display = 'inline-block';
+
+                    // Clear QR-related messages
+                    qrMessage.textContent = '';
+
+                    // Stop QR scanner if running
+                    if (html5QrCode && html5QrCode.isScanning) {
+                        await html5QrCode.stop();
+                    }
+
+                    // Hide QR, show video
+                    qrReader.style.display = 'none';
+                    video.style.display = 'block';
+
+                    // Switch controls
+                    qrFallback.style.display = 'none';
+                    faceControls.style.display = 'flex';
+
+                    // Reset messages and results
+                    qrMessage.textContent = '';
+                    
+                    // Restart webcam
+                    return await startWebcam();
+                } catch (error) {
+                    console.error("Error switching to face recognition:", error);
+                    faceErrorMessage.textContent = "Error switching to camera";
+                    faceError.style.display = 'block';
+                    return false;
+                } finally {
+                    faceLoading.style.display = 'none';
+                }
+            }
+
+            // Show successful recognition result
+            function showSuccessResult(response) {
+
+                // Clear any previous errors
+                faceError.style.display = 'none';
+                message.textContent = '';
+
+                resultContainer.style.display = 'block';
+                successDetails.style.display = 'block';
+                errorDetails.style.display = 'none';
+
+                // Set user details
+                userFullName.textContent = response.user_details.full_name;
+                userEmail.textContent = response.user_details.email;
+
+                // Handle image display - unified approach
+                const userImage = document.getElementById('user-image');
+
+                // Reset image first
+                userImage.style.display = 'none';
+
+                // Priority: 1. QR profile photo, 2. Detected face
+                if (response.user_details.profile_picture) {
+                    userImage.src = 'data:image/jpeg;base64,' + response.user_details.profile_picture;
+                    userImage.alt = `${response.user_details.full_name}'s Profile`;
+                    userImage.style.display = 'block';
+                } else if (response.user_details.photo) {
+                    userImage.src = 'data:image/jpeg;base64,' + response.user_details.photo;
+                    userImage.alt = `${response.user_details.full_name}'s Profile`;
+                    userImage.style.display = 'block';
+                } else if (response.detected_face) {
+                    userImage.src = 'data:image/jpeg;base64,' + response.detected_face;
+                    userImage.alt = 'Detected Face';
+                    userImage.style.display = 'block';
+                }
+
+                // Set event details
+                eventName.textContent = response.event_details.name;
+                eventDate.textContent = response.event_details.date;
+                eventLocation.textContent = response.event_details.location;
+                ticketStatus.textContent = response.ticket_status || "Valid";
+
+                // Set entry status
+                entryStatus.textContent = "Entry Granted!";
+                entryStatus.className = "alert alert-success";
+            }
+
+            // Show error result
+            function showErrorResult(msg) {
+                resultContainer.style.display = 'block';
+                successDetails.style.display = 'none';
+                errorDetails.style.display = 'block';
+
+                entryStatus.textContent = "Entry Denied";
+                entryStatus.className = "alert alert-danger";
+                errorMessage.textContent = msg;
+                userImage.style.display = 'none';
+            }
+
+            // Event Listeners
+            document.getElementById('capture').addEventListener('click', async function () {
+                try {
+                    faceLoading.style.display = 'inline-block';
+                    this.disabled = true;
+
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    const imageData = canvas.toDataURL('image/jpeg');
+
+                    const response = await $.ajax({
+                        url: '{% url "recognize" %}',
+                        type: 'POST',
+                        data: {
+                            image: imageData,
+                            event_id: eventId,
+                            csrfmiddlewaretoken: '{{ csrf_token }}'
+                        }
+                    });
+
+                    message.textContent = response.message;
+                    message.style.color = response.status === 'success' ? 'green' : 'red';
+
+                    if (response.status === 'success') {
+                        showSuccessResult(response);
+                    } else {
+                        showErrorResult(response.message);
+                    }
+                } catch (error) {
+                    console.error("Recognition error:", error);
+                    message.textContent = "Error processing request";
+                    message.style.color = 'red';
+                } finally {
+                    faceLoading.style.display = 'none';
+                    this.disabled = false;
+                }
+            });
+
+            document.getElementById('back-to-face').addEventListener('click', async function () {
+                const success = await showFaceRecognition();
+                if (!success) {
+                    await showQRScanner();
+                }
+            });
+
+            tryQrBtn.addEventListener('click', async function () {
+                await showQRScanner();
+            });
+
+            // Initialize
+            startWebcam();
+        });
+    </script>
+</body>
+
+</html>

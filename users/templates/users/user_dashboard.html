@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EventPass - User Panel</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Bootstrap & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Animate.css for smooth animations -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        :root {
+            --primary-color: #6f42c1;
+            --primary-light: #f5f3ff;
+            --secondary-color: #8e44ad;
+            --text-dark: #2d3748;
+            --text-medium: #4a5568;
+            --text-light: #718096;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 10px 25px rgba(111, 66, 193, 0.15);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            padding-bottom: 80px;
+            color: var(--text-dark);
+        }
+
+        /* Navbar Styles */
+        .navbar {
+            background-color: #fff;
+            box-shadow: var(--shadow-sm);
+            padding: 0.75rem 1rem;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .navbar-brand i {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        /* Icon Components */
+        .icon-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .icon-circle:hover {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: #ef4444;
+            color: white;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 50%;
+            padding: 2px 6px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+        }
+
+        .bottom-nav a {
+            text-decoration: none;
+            color: var(--text-light);
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: var(--transition);
+            flex: 1;
+            max-width: 80px;
+        }
+
+        .bottom-nav a.active {
+            color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .bottom-nav i {
+            font-size: 1.25rem;
+            margin-bottom: 4px;
+        }
+
+        /* Card Styles */
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            padding: 1rem 1.25rem;
+        }
+
+        /* Featured Events */
+        .featured-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 16px;
+        }
+
+        .featured-card .btn {
+            background-color: #fff;
+            color: var(--primary-color);
+            font-weight: 500;
+            border-radius: 8px;
+        }
+
+        .featured-card .badge {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        /* Carousel Adjustments */
+        .carousel-inner {
+            padding: 0 40px;
+        }
+
+        .carousel-control-prev,
+        .carousel-control-next {
+            width: 40px;
+        }
+
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            background-size: 60%;
+        }
+
+        /* RECOMMENDATIONS SECTION */
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 50px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border-radius: 4px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .view-all-link {
+            font-size: 0.9rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .view-all-link:hover {
+            color: var(--secondary-color);
+            transform: translateX(3px);
+        }
+
+        .view-all-link i {
+            margin-left: 5px;
+            font-size: 0.8rem;
+        }
+
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .event-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .event-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .event-image-container {
+            position: relative;
+            width: 100%;
+            height: 160px;
+            overflow: hidden;
+        }
+
+        .event-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .event-card:hover .event-image {
+            transform: scale(1.05);
+        }
+
+        .event-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--primary-color);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            box-shadow: var(--shadow-sm);
+            z-index: 1;
+        }
+
+        .event-content {
+            padding: 1.25rem;
+        }
+
+        .event-name {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem;
+            color: var(--text-dark);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .event-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-medium);
+            margin-bottom: 0.75rem;
+        }
+
+        .event-date {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .event-price {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 0.95rem;
+        }
+
+        .event-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.75rem;
+        }
+
+        .event-category {
+            font-size: 0.75rem;
+            background: var(--primary-light);
+            color: var(--primary-color);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .event-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .event-btn {
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.35rem 0.7rem;
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+        }
+
+        .event-btn i {
+            margin-right: 3px;
+        }
+
+        .event-btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .event-btn-primary:hover {
+            background-color: #5e35b1;
+            border-color: #5e35b1;
+        }
+
+        .event-btn-outline {
+            background-color: white;
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .event-btn-outline:hover {
+            background-color: var(--primary-light);
+        }
+
+        /* QUICK ACTIONS */
+        .quick-actions {
+            margin-bottom: 2.5rem;
+        }
+
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .quick-action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .quick-action-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .quick-action-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-light), #e9e4ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.75rem;
+            color: var(--primary-color);
+            font-size: 1.25rem;
+            transition: var(--transition);
+        }
+
+        .quick-action-card:hover .quick-action-icon {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .quick-action-text {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        /* UPCOMING EVENTS */
+        .upcoming-events {
+            margin-bottom: 2.5rem;
+        }
+
+        .upcoming-event-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 12px;
+            transition: var(--transition);
+            margin-bottom: 0.75rem;
+            background-color: white;
+        }
+
+        .upcoming-event-item:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .upcoming-event-date {
+            min-width: 50px;
+            text-align: center;
+            margin-right: 1rem;
+            background: var(--primary-light);
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+
+        .upcoming-event-day {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            line-height: 1;
+        }
+
+        .upcoming-event-month {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--primary-color);
+        }
+
+        .upcoming-event-details {
+            flex: 1;
+        }
+
+        .upcoming-event-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 0.95rem;
+        }
+
+        .upcoming-event-time {
+            font-size: 0.8rem;
+            color: var(--text-medium);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .upcoming-event-time i {
+            font-size: 0.7rem;
+        }
+
+        /* ANNOUNCEMENTS */
+        .announcement-card {
+            border-left: 4px solid var(--primary-color);
+            transition: var(--transition);
+            margin-bottom: 1rem;
+        }
+
+        .announcement-card:hover {
+            transform: translateX(5px);
+        }
+
+        .announcement-icon {
+            font-size: 1.1rem;
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+
+        .announcement-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .announcement-message {
+            font-size: 0.9rem;
+            color: var(--text-medium);
+            margin-bottom: 0.5rem;
+        }
+
+        .announcement-time {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        /* STATS CARDS */
+        .stats-card {
+            padding: 1.25rem;
+            border-radius: 12px;
+            color: white;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-card-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .stats-card-secondary {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        }
+
+        .stats-card-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .stats-card-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .stats-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stats-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .stats-icon {
+            position: absolute;
+            right: 1.25rem;
+            top: 1.25rem;
+            font-size: 1.5rem;
+            opacity: 0.2;
+        }
+
+        /* RECENT ACTIVITY */
+        .activity-item {
+            display: flex;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-message {
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        /* RESPONSIVE ADJUSTMENTS */
+        @media (max-width: 992px) {
+            .recommendations-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .quick-actions-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .event-image-container {
+                height: 140px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .recommendations-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-card {
+                padding: 1rem;
+            }
+
+            .stats-value {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-ticket-perforated"></i>
+                <span>EventPass</span>
+            </a>
+
+            <!-- Notifications & Profile Icons -->
+            <div class="d-flex align-items-center">
+                <!-- Notifications -->
+                <div class="dropdown me-2">
+                    <a class="icon-circle position-relative" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-bell fs-5"></i>
+                        {% if notifications|length > 0 %}
+                        <span class="notification-badge">{{ notifications|length }}</span>
+                        {% endif %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end p-0"
+                        style="width: 320px; max-height: 400px; overflow-y: auto;">
+                        <li class="dropdown-header p-3 border-bottom">
+                            <h6 class="mb-0">Notifications</h6>
+                        </li>
+                        {% for notif in notifications %}
+                        <li>
+                            <a class="dropdown-item{% if not notif.is_read %} fw-bold{% endif %} p-3"
+                                href="{{ notif.url|default:'#' }}">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        {% if notif.type == "booking" %}
+                                        <i class="bi bi-ticket-perforated text-primary"></i>
+                                        {% elif notif.type == "event" %}
+                                        <i class="bi bi-calendar-event text-success"></i>
+                                        {% elif notif.type == "system" %}
+                                        <i class="bi bi-info-circle text-info"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div>{{ notif.message }}</div>
+                                        <small class="text-muted">{{ notif.created_at|timesince }} ago</small>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        {% empty %}
+                        <li class="p-3 text-center text-muted">No notifications</li>
+                        {% endfor %}
+                        <li class="dropdown-footer p-2 border-top text-center">
+                            <a href="#" class="text-primary small">View all notifications</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Profile -->
+                <div class="dropdown">
+                    <a class="icon-circle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-fill fs-5"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li class="dropdown-header p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="icon-circle bg-primary-light text-primary">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ request.user.get_full_name }}</h6>
+                                    <small class="text-muted">{{ request.user.email }}</small>
+                                </div>
+                            </div>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'view_profile' %}"><i class="bi bi-person me-2"></i>
+                                Profile</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Settings</a></li>
+                        <li><a class="dropdown-item" href="{% url 'my_tickets' %}"><i
+                                    class="bi bi-ticket-perforated me-2"></i> My Tickets</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i
+                                    class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container py-4">
+        <!-- Welcome Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold mb-1">Welcome back, {{ request.user.first_name }} 👋</h4>
+                <p class="text-muted small mb-0">Here's what's happening with your events today</p>
+            </div>
+            <div>
+                <span class="badge bg-primary-light text-primary">Member since {{ request.user.date_joined|date:"M Y"}}</span>
+            </div>
+        </div>
+
+        {% if not face_registered %}
+        <div class="alert alert-info d-flex align-items-center">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <div>
+                Please <a href="{% url 'capture_face' %}" class="alert-link">register your face</a> to access all event
+                features.
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="stats-card stats-card-primary position-relative">
+                    <div class="stats-value">{{ upcoming_events_count }}</div>
+                    <div class="stats-label">Upcoming Events</div>
+                    <i class="bi bi-calendar-event stats-icon"></i>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="stats-card stats-card-secondary position-relative">
+                    <div class="stats-value">{{ booked_events_count }}</div>
+                    <div class="stats-label">Booked Events</div>
+                    <i class="bi bi-ticket-perforated stats-icon"></i>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="stats-card stats-card-success position-relative">
+                    <div class="stats-value">{{ attended_events_count }}</div>
+                    <div class="stats-label">Attended Events</div>
+                    <i class="bi bi-check-circle stats-icon"></i>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Featured Events Carousel Section -->
+        <div class="mb-5">
+            <div class="section-header mb-4">
+                <h3 class="section-title">Featured Events</h3>
+                <a href="{% url 'event_list' %}" class="view-all-link">
+                    View all <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            {% if featured_events %}
+            <div id="featuredEventsCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    {% for event in featured_events %}
+                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                        <div class="card featured-card p-4 mx-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span class="badge mb-2">Featured</span>
+                                    <h4 class="mb-2">{{ event.name }}</h4>
+                                    <p class="mb-2">
+                                        <i class="bi bi-calendar-event me-1"></i> {{ event.start_date_time|date:"F d, Y"}} •
+                                        <i class="bi bi-clock me-1"></i> {{ event.start_date_time|time:"g:i A" }}
+                                    </p>
+                                    <p class="mb-3">
+                                        <i class="bi bi-geo-alt me-1"></i> {{ event.location }}
+                                    </p>
+                                    <div class="d-flex gap-2">
+                                        <a href="{% url 'event_list' %}#event-{{ event.id }}"
+                                            class="btn btn-light btn-sm">
+                                            View Details
+                                        </a>
+                                        <a href="{% url 'ticket_booking' event.id %}" class="btn btn-light btn-sm">
+                                            Book Now
+                                        </a>
+                                    </div>
+                                </div>
+                                {% if event.image %}
+                                <img src="{{ event.image.url }}" class="rounded"
+                                    style="width: 100px; height: 100px; object-fit: cover;">
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#featuredEventsCarousel"
+                    data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#featuredEventsCarousel"
+                    data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+            {% else %}
+            <div class="card featured-card p-5 text-center">
+                <div class="card-body">
+                    <i class="bi bi-calendar-x" style="font-size: 2rem; opacity: 0.7;"></i>
+                    <h5 class="mt-3 mb-2">No Featured Events</h5>
+                    <p class="small mb-0">Check back later for exciting featured events</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recommended Events Section -->
+        {% if recommended_events %}
+        <section class="mb-5">
+            <div class="section-header">
+                <h3 class="section-title">Recommended For You</h3>
+                <a href="{% url 'event_list' %}" class="view-all-link">
+                    View all <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="recommendations-grid">
+                {% for event in recommended_events %}
+                <article class="event-card" data-event-id="{{ event.id }}">
+                    <div class="event-image-container">
+                        {% if event.image %}
+                        <img src="{{ event.image.url }}" alt="{{ event.name }}" class="event-image">
+                        {% else %}
+                        <div class="event-image d-flex align-items-center justify-content-center"
+                            style="background: var(--primary-light);">
+                            <i class="bi bi-calendar-event" style="font-size: 2rem; color: var(--primary-color);"></i>
+                        </div>
+                        {% endif %}
+                        <span class="event-badge">{{ event.get_category_display }}</span>
+                    </div>
+
+                    <div class="event-content">
+                        <h4 class="event-name">{{ event.name }}</h4>
+
+                        <div class="event-meta">
+                            <span class="event-date">
+                                <i class="bi bi-calendar"></i>
+                                {{ event.start_date_time|date:"M d" }}
+                            </span>
+                            <span class="event-price">
+                                {% if event.is_free %}Free{% else %}Rs. {{ event.general_price }}{% endif %}
+                            </span>
+                        </div>
+
+                        <div class="event-footer">
+                            <span class="event-category">{{ event.event_type }}</span>
+
+                            <div class="event-actions">
+                                <button class="event-btn event-btn-outline feedback-btn" data-action="dismiss">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                                <button class="event-btn event-btn-primary feedback-btn" data-action="click">
+                                    <i class="bi bi-heart"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <div class="row">
+            <!-- Left Column -->
+            <div class="col-lg-8">
+                <!-- Upcoming Events -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Your Upcoming Events</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if upcoming_events %}
+                        {% for event in upcoming_events %}
+                        <div class="upcoming-event-item">
+                            <div class="upcoming-event-date">
+                                <div class="upcoming-event-day">{{ event.start_date_time|date:"d" }}</div>
+                                <div class="upcoming-event-month">{{ event.start_date_time|date:"M" }}</div>
+                            </div>
+                            <div class="upcoming-event-details">
+                                <div class="upcoming-event-name">
+                                    <strong>{{ event.name }}</strong>
+                                </div>
+                                <div class="upcoming-event-time">
+                                    <i class="bi bi-clock"></i>
+                                    {{ event.start_date_time|time:"g:i A" }} • {{ event.location }}
+                                </div>
+                            </div>
+                            <div>
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#eventModal{{ event.id }}">
+                                    <i class="bi bi-chevron-right text-muted"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-calendar-x text-muted" style="font-size: 2rem;"></i>
+                            <p class="text-muted mt-2 mb-0">No upcoming events</p>
+                            <a href="{% url 'event_list' %}" class="btn btn-sm btn-primary mt-3">Browse Events</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Announcement -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Announcements</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if announcements %}
+                        {% for ann in announcements %}
+                        <div class="announcement-card card mb-3">
+                            <div class="card-body">
+                                <h6 class="announcement-title">
+                                    {% if ann.type == "maintenance" %}
+                                    <i class="bi bi-tools announcement-icon"></i>
+                                    {% elif ann.type == "news" %}
+                                    <i class="bi bi-megaphone announcement-icon"></i>
+                                    {% elif ann.type == "payment" %}
+                                    <i class="bi bi-credit-card announcement-icon"></i>
+                                    {% endif %}
+                                    {{ ann.title }}
+                                </h6>
+                                <p class="announcement-message">{{ ann.message }}</p>
+                                <small class="announcement-time">{{ ann.created_at|date:"M d, Y H:i" }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-megaphone text-muted" style="font-size: 2rem;"></i>
+                            <p class="text-muted mt-2 mb-0">No announcements</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-4">
+                <!-- Quick Actions -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="quick-actions-grid">
+                            <a href="{% url 'event_list' %}" class="text-decoration-none">
+                                <div class="quick-action-card">
+                                    <div class="quick-action-icon">
+                                        <i class="bi bi-calendar-event"></i>
+                                    </div>
+                                    <div class="quick-action-text">Browse Events</div>
+                                </div>
+                            </a>
+
+                            <a href="{% url 'my_tickets'%}" class="text-decoration-none">
+                                <div class="quick-action-card">
+                                    <div class="quick-action-icon">
+                                        <i class="bi bi-ticket-perforated"></i>
+                                    </div>
+                                    <div class="quick-action-text">My Tickets</div>
+                                </div>
+                            </a>
+
+
+
+                            <a href="{% url 'capture_face' %}" class="text-decoration-none">
+                                <div class="quick-action-card">
+                                    <div class="quick-action-icon">
+                                        <i class="bi bi-camera"></i>
+                                    </div>
+                                    <div class="quick-action-text">Face Registration</div>
+                                </div>
+                            </a>
+
+                            <a href="{% url 'view_profile' %}" class="text-decoration-none">
+                                <div class="quick-action-card">
+                                    <div class="quick-action-icon">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                    <div class="quick-action-text">Profile</div>
+                                </div>
+                            </a>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="{% url 'user_dashboard' %}" class="active">
+            <i class="bi bi-house-door"></i>
+            <span>Home</span>
+        </a>
+        <a href="{% url 'event_list' %}">
+            <i class="bi bi-calendar-event"></i>
+            <span>Events</span>
+        </a>
+        <a href="{% url 'my_tickets' %}">
+            <i class="bi bi-ticket-perforated"></i>
+            <span>Tickets</span>
+        </a>
+        <a href="{% url 'capture_face' %}">
+            <i class="bi bi-camera"></i>
+            <span>Face Reg.</span>
+        </a>
+
+        <a href="{% url 'view_profile' %}">
+            <i class="bi bi-person"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Feedback buttons functionality
+        document.querySelectorAll('.feedback-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const eventId = this.closest('.event-card').dataset.eventId;
+                const action = this.dataset.action;
+
+                fetch(`/events/${eventId}/feedback/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `action=${action}`
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Visual feedback
+                            this.disabled = true;
+                            this.classList.add('active');
+
+                            if (action === 'dismiss') {
+                                // Fade out animation for dismissed items
+                                const item = this.closest('.event-card');
+                                item.style.opacity = '0.5';
+                                item.style.pointerEvents = 'none';
+                            } else if (action === 'click') {
+                                this.innerHTML = '<i class="bi bi-heart-fill"></i>';
+                            }
+                        }
+                    });
+            });
+        });
+
+        // Animate cards on scroll
+        const animateOnScroll = () => {
+            const cards = document.querySelectorAll('.event-card, .quick-action-card, .announcement-card');
+            cards.forEach(card => {
+                const cardPosition = card.getBoundingClientRect().top;
+                const screenPosition = window.innerHeight / 1.2;
+
+                if (cardPosition < screenPosition) {
+                    card.classList.add('animate__animated', 'animate__fadeInUp');
+                }
+            });
+        };
+
+        window.addEventListener('scroll', animateOnScroll);
+        document.addEventListener('DOMContentLoaded', animateOnScroll);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,339 @@
+<!-- my_tickets.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My Tickets - EventPass</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6f42c1;
+            --primary-light: #f3effb;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            padding-bottom: 70px;
+        }
+
+        .navbar {
+            background-color: #fff;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .navbar .fw-bold {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .dropdown-menu {
+            width: 200px;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: red;
+            color: white;
+            font-size: 12px;
+            border-radius: 50%;
+            padding: 2px 5px;
+        }
+
+        .icon-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-group>div {
+            margin-left: 20px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .bottom-nav a {
+            text-decoration: none;
+            color: #6c757d;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .bottom-nav a.active {
+            color: #6f42c1;
+        }
+
+        .bottom-nav i {
+            font-size: 20px;
+        }
+
+
+        /* Ticket Card Styles */
+        .ticket-card {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .ticket-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .ticket-header {
+            background: linear-gradient(135deg, #6f42c1, #8e44ad);
+            color: white;
+            padding: 15px;
+            position: relative;
+        }
+
+        .ticket-body {
+            padding: 15px;
+            background: white;
+        }
+
+        .ticket-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-upcoming {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-ended {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .ticket-price {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .empty-state-icon {
+            font-size: 60px;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .filter-btns .btn {
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 13px;
+            margin-right: 8px;
+            margin-bottom: 10px;
+            border-width: 1.5px;
+        }
+
+        .filter-btns .btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-light px-3 sticky-top shadow-sm">
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-ticket-fill text-primary fs-3 me-2"></i>
+                <span class="fw-bold fs-5">EventPass</span>
+            </div>
+
+            <div class="d-flex align-items-center icon-group">
+                <!-- Notifications -->
+                <div class="dropdown">
+                    <a class="icon-circle position-relative" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-bell text-dark fs-5"></i>
+                        {% if notifications|length > 0 %}
+                        <span class="notification-badge">{{ notifications|length }}</span>
+                        {% endif %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        {% for notif in notifications %}
+                        <li>
+                            <a class="dropdown-item{% if not notif.is_read %} fw-bold{% endif %}"
+                                href="{{ notif.url|default:'#' }}">
+                                {{ notif.message }}
+                                <br>
+                                <small class="text-muted">{{ notif.created_at|date:"M d, Y H:i" }}</small>
+                            </a>
+                        </li>
+                        {% empty %}
+                        <li><span class="dropdown-item text-muted">No notifications</span></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Profile -->
+                <div class="dropdown">
+                    <a class="icon-circle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-fill text-dark fs-5"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#">Profile</a></li>
+                        <li><a class="dropdown-item" href="#">Settings</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item text-danger" href="#">Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Tickets Content -->
+    <div class="container py-4">
+        <h5 class="mb-3 fw-semibold">🎟️ My Tickets</h5>
+
+        <!-- Filter Buttons -->
+        <div class="filter-btns mb-4">
+            <button class="btn btn-outline-primary active" data-filter="all">All</button>
+            <button class="btn btn-outline-primary" data-filter="active">Active</button>
+            <button class="btn btn-outline-primary" data-filter="upcoming">Upcoming</button>
+            <button class="btn btn-outline-primary" data-filter="ended">Past</button>
+        </div>
+
+        {% if tickets %}
+        <div class="row" id="tickets-container">
+            {% for ticket in tickets %}
+            <div class="col-md-6 col-lg-4 mb-4" data-status="{{ ticket.status }}">
+                <div class="ticket-card">
+                    <div class="ticket-header">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ ticket.event.name }}</h6>
+                                <small>{{ ticket.event.start_date_time|date:"M d, Y" }}</small>
+                            </div>
+                            <span class="ticket-status status-{{ ticket.status }}">
+                                {% if ticket.status == 'active' %}ACTIVE
+                                {% elif ticket.status == 'upcoming' %}UPCOMING
+                                {% else %}PAST{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="ticket-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Ticket Type:</span>
+                            <strong>{{ ticket.get_ticket_type_display }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Price:</span>
+                            <span class="ticket-price">Rs. {{ ticket.price }}</span>
+                        </div>
+                        <a href="{% url 'ticket_detail' ticket.id %}" class="btn btn-sm btn-primary w-100">
+                            View Ticket
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="bi bi-ticket-perforated"></i>
+            </div>
+            <h5>No Tickets Yet</h5>
+            <p class="text-muted">You haven't purchased any tickets yet. Browse events to get started!</p>
+            <a href="{% url 'event_list' %}" class="btn btn-primary mt-2">Browse Events</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="{% url 'user_dashboard' %}">
+            <i class="bi bi-house-door"></i>
+            <span>Home</span>
+        </a>
+        <a href="{% url 'event_list' %}">
+            <i class="bi bi-calendar-event"></i>
+            <span>Events</span>
+        </a>
+        <a href="{% url 'my_tickets' %}" class="active">
+            <i class="bi bi-ticket-perforated"></i>
+            <span>Tickets</span>
+        </a>
+        <a href="{% url 'capture_face' %}">
+            <i class="bi bi-camera"></i>
+            <span>Face Reg.</span>
+        </a>
+        <a href="{% url 'view_profile' %}">
+            <i class="bi bi-person"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Filter tickets by status
+        document.querySelectorAll('.filter-btns .btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Update active button
+                document.querySelectorAll('.filter-btns .btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filter = this.dataset.filter;
+                const tickets = document.querySelectorAll('#tickets-container > div');
+                
+                tickets.forEach(ticket => {
+                    if (filter === 'all') {
+                        ticket.style.display = 'block';
+                    } else {
+                        if (ticket.dataset.status === filter) {
+                            ticket.style.display = 'block';
+                        } else {
+                            ticket.style.display = 'none';
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

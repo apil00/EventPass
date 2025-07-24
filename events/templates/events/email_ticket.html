@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket</title>
+</head>
+<body>
+    <p>Dear {{ user.get_full_name|default:user.email }},</p>
+    <p>Thank you for your purchase! Attached is your ticket for <strong>{{ ticket.event.name }}</strong>.</p>
+    <p>
+        <strong>Event Date:</strong> {{ ticket.event.start_date_time|date:"M d, Y H:i" }}<br>
+        <strong>Ticket Type:</strong> {{ ticket.get_ticket_type_display }}
+    </p>
+    <p>Your ticket PDF contains a QR code for entry. Please present it at the event.</p>
+    {% if qr_code_base64 %}
+        <p><strong>Your QR Code:</strong></p>
+        <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" style="width:180px;height:180px;">
+    {% endif %}
+</body>
+</html>
