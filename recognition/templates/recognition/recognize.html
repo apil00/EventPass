@@ -177,6 +177,10 @@
                                 <i class="fas fa-envelope me-2"></i>
                                 <span id="user-email" class="fw-bold"></span>
                             </p>
+                            <p class="detail-item" id="purchased-by" style="display:none;">
+    <i class="fas fa-user-check me-2"></i>
+    <span></span>
+</p>
                         </div>
 
                         <hr>
@@ -405,6 +409,19 @@
                 // Set user details
                 userFullName.textContent = response.user_details.full_name;
                 userEmail.textContent = response.user_details.email;
+
+                // Show "Purchased by" if present (for guests)
+                const purchasedBy = response.user_details.purchased_by;
+                let purchasedByElem = document.getElementById('purchased-by');
+                if (purchasedByElem) {
+                    if (purchasedBy) {
+                        purchasedByElem.textContent = "Purchased by: " + purchasedBy;
+                        purchasedByElem.style.display = 'block';
+                    } else {
+                        purchasedByElem.style.display = 'none';
+                    }
+                }
+
 
                 // Handle image display - unified approach
                 const userImage = document.getElementById('user-image');

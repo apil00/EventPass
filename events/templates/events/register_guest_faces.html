@@ -1,0 +1,647 @@
+<!-- events/register_guest_faces.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Register Guest Faces - EventPass</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6f42c1;
+            --primary-light: #f5f3ff;
+            --secondary-color: #8e44ad;
+            --text-dark: #2d3748;
+            --text-medium: #4a5568;
+            --text-light: #718096;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            padding-bottom: 80px;
+            color: var(--text-dark);
+        }
+
+        .navbar {
+            background-color: #fff;
+            box-shadow: var(--shadow-sm);
+            padding: 0.75rem 1rem;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .navbar-brand i {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        .icon-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .icon-circle:hover {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: #ef4444;
+            color: white;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 50%;
+            padding: 2px 6px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+        }
+
+        .bottom-nav a {
+            text-decoration: none;
+            color: var(--text-light);
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: var(--transition);
+            flex: 1;
+            max-width: 80px;
+        }
+
+        .bottom-nav a.active {
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .bottom-nav i {
+            font-size: 1.25rem;
+            margin-bottom: 4px;
+        }
+
+        /* Improved Main Container Styles */
+        .main-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .registration-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .guest-count-badge {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .instructions {
+            color: var(--text-medium);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .face-capture-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(111, 66, 193, 0.15);
+        }
+
+        #main_video {
+            width: 100%;
+            height: auto;
+            background: #222;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        #main_video:hover {
+            transform: scale(1.02);
+        }
+
+        #main_canvas {
+            display: none;
+        }
+
+        .video-message {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        .error-message {
+            color: #e53e3e;
+            font-size: 0.85rem;
+        }
+
+        .guest-form {
+            margin-top: 2rem;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.25rem rgba(111, 66, 193, 0.15);
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background-color: #5e3aa8;
+            border-color: #5e3aa8;
+        }
+
+        .btn-outline-primary {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-light);
+        }
+
+        .btn-secondary {
+            background-color: #f1f5f9;
+            border-color: #f1f5f9;
+            color: var(--text-medium);
+        }
+
+        .btn-secondary:hover {
+            background-color: #e2e8f0;
+            border-color: #e2e8f0;
+        }
+
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+
+        .preview-label {
+            font-size: 0.9rem;
+            color: var(--text-medium);
+            margin-bottom: 0.5rem;
+        }
+
+        .preview-img {
+            width: 120px;
+            height: 140px;
+            border-radius: 8px;
+            border: 2px solid var(--primary-light);
+            object-fit: cover;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .preview-img:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-md);
+        }
+
+        .progress-tracker {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .progress-step {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #e2e8f0;
+            transition: var(--transition);
+        }
+
+        .progress-step.active {
+            background-color: var(--primary);
+            transform: scale(1.2);
+        }
+
+        .guest-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .guest-number {
+            font-weight: 600;
+            color: var(--primary);
+            background-color: var(--primary-light);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar (unchanged) -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-ticket-perforated"></i>
+                <span>EventPass</span>
+            </a>
+            <!-- ... (notifications/profile as in your code) ... -->
+        </div>
+    </nav>
+
+    <!-- Improved Main Container -->
+    <div class="main-container">
+        <div class="registration-card">
+            <h1 class="section-title">
+                <i class="bi bi-people-fill"></i>
+                Register Guest Attendees
+                <span class="guest-count-badge">{{ guest_count }} guest{{ guest_count|pluralize }}</span>
+            </h1>
+            
+            <p class="instructions">
+                Please register each guest by capturing their face and entering their name. 
+                Ensure good lighting and that the face is clearly visible in the frame.
+            </p>
+
+            <!-- Progress tracker -->
+            <div class="progress-tracker">
+                {% for form in forms %}
+                <div class="progress-step {% if forloop.first %}active{% endif %}" id="step_{{ forloop.counter0 }}"></div>
+                {% endfor %}
+            </div>
+
+            <!-- Video stream container -->
+            <div class="face-capture-container">
+                <div class="video-wrapper">
+                    <video id="main_video" width="320" height="240" autoplay playsinline></video>
+                    <canvas id="main_canvas" width="320" height="240" style="display:none;"></canvas>
+                </div>
+                <p id="main_video_message" class="video-message">Position the guest's face in the frame</p>
+            </div>
+
+            <form method="POST" id="attendeeForm">
+                {% csrf_token %}
+                <div id="guestSections">
+                    {% for form in forms %}
+                    <div class="guest-form" id="guest_section_{{ forloop.counter0 }}"
+                        style="{% if not forloop.first %}display:none;{% endif %}">
+                        
+                        <div class="guest-header">
+                            <h5>Guest Information</h5>
+                            <span class="guest-number">Guest {{ forloop.counter }} of {{ forms|length }}</span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="guest_name_{{ forloop.counter0 }}" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" name="guest_name_{{ forloop.counter0 }}"
+                                id="guest_name_{{ forloop.counter0 }}" placeholder="Enter guest's full name" required>
+                        </div>
+                        
+                        <button type="button" class="btn btn-outline-primary capture-btn"
+                            data-target="{{ forloop.counter0 }}">
+                            <i class="bi bi-camera me-2"></i>Capture Face
+                        </button>
+                        
+                        <input type="hidden" name="face_{{ forloop.counter0 }}" id="face_data_{{ forloop.counter0 }}"
+                            required>
+                        
+                        <div id="preview_{{ forloop.counter0 }}" class="preview-container" style="display:none;">
+                            <span class="preview-label">Face Preview</span>
+                            <img id="preview_img_{{ forloop.counter0 }}" src="" alt="Captured face preview"
+                                class="preview-img mb-2">
+                            <button type="button" class="btn btn-sm btn-secondary recapture-btn"
+                                data-target="{{ forloop.counter0 }}">
+                                <i class="bi bi-arrow-repeat me-1"></i>Recapture
+                            </button>
+                        </div>
+                        
+                        <p id="message_{{ forloop.counter0 }}" class="error-message mt-2 mb-0"></p>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="action-buttons">
+                    <button type="button" id="nextGuestBtn" class="btn btn-primary">
+                        <i class="bi bi-arrow-right me-2"></i>Next Guest
+                    </button>
+                    <button type="submit" id="finishBtn" class="btn btn-success" style="display:none;">
+                        <i class="bi bi-check-circle me-2"></i>Finish & Proceed
+                    </button>
+                    <a href="{% url 'event_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation (unchanged) -->
+    <div class="bottom-nav">
+        <a href="{% url 'user_dashboard' %}">
+            <i class="bi bi-house-door"></i>
+            <span>Home</span>
+        </a>
+        <a href="{% url 'event_list' %}">
+            <i class="bi bi-calendar-event"></i>
+            <span>Events</span>
+        </a>
+        <a href="{% url 'my_tickets' %}">
+            <i class="bi bi-ticket-perforated"></i>
+            <span>Tickets</span>
+        </a>
+        <a href="{% url 'capture_face' %}" class="active">
+            <i class="bi bi-camera"></i>
+            <span>Face Reg.</span>
+        </a>
+        <a href="{% url 'view_profile' %}">
+            <i class="bi bi-person"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <script>
+        let mainStream = null;
+
+        // Start the camera once for all guests
+        async function startMainCamera() {
+            const video = document.getElementById('main_video');
+            const message = document.getElementById('main_video_message');
+            
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                message.textContent = 'Camera access is not supported by your browser.';
+                message.classList.add('error-message');
+                return;
+            }
+            
+            try {
+                mainStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    } 
+                });
+                video.srcObject = mainStream;
+                message.textContent = 'Position the guest\'s face in the frame';
+                message.classList.remove('error-message');
+            } catch (err) {
+                message.textContent = 'Error accessing camera: ' + (err.message || 'Please ensure camera permissions are granted.');
+                message.classList.add('error-message');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', startMainCamera);
+
+        // Handle Capture button clicks
+        document.querySelectorAll('.capture-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const attendeeIndex = parseInt(this.getAttribute('data-target'));
+                const canvas = document.getElementById('main_canvas');
+                const video = document.getElementById('main_video');
+                const context = canvas.getContext('2d');
+                const faceDataInput = document.getElementById(`face_data_${attendeeIndex}`);
+                const previewDiv = document.getElementById(`preview_${attendeeIndex}`);
+                const previewImg = document.getElementById(`preview_img_${attendeeIndex}`);
+                const messageElement = document.getElementById(`message_${attendeeIndex}`);
+
+                if (video.srcObject) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    faceDataInput.value = dataUrl;
+                    previewImg.src = dataUrl;
+                    previewDiv.style.display = 'flex';
+                    messageElement.textContent = '';
+                    
+                    // Add success styling
+                    previewDiv.classList.add('animate__animated', 'animate__fadeIn');
+                    setTimeout(() => {
+                        previewDiv.classList.remove('animate__animated', 'animate__fadeIn');
+                    }, 1000);
+                } else {
+                    messageElement.textContent = 'Camera not initialized or access denied.';
+                }
+            });
+        });
+
+        // Handle Recapture button clicks
+        document.querySelectorAll('.recapture-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const attendeeIndex = parseInt(this.getAttribute('data-target'));
+                const previewDiv = document.getElementById(`preview_${attendeeIndex}`);
+                const faceDataInput = document.getElementById(`face_data_${attendeeIndex}`);
+                const messageElement = document.getElementById(`message_${attendeeIndex}`);
+                
+                previewDiv.style.display = 'none';
+                faceDataInput.value = '';
+                messageElement.textContent = '';
+            });
+        });
+
+        // Guided navigation for guests
+        document.addEventListener('DOMContentLoaded', function () {
+            const totalGuests = {{ forms|length }};
+            let currentGuest = 0;
+
+            function showGuestSection(index) {
+                // Update progress steps
+                document.querySelectorAll('.progress-step').forEach((step, i) => {
+                    if (i <= index) {
+                        step.classList.add('active');
+                    } else {
+                        step.classList.remove('active');
+                    }
+                });
+                
+                // Show/hide guest sections
+                for (let i = 0; i < totalGuests; i++) {
+                    document.getElementById(`guest_section_${i}`).style.display = (i === index) ? 'block' : 'none';
+                }
+                
+                // Update navigation buttons
+                document.getElementById('nextGuestBtn').style.display = (index < totalGuests - 1) ? 'inline-flex' : 'none';
+                document.getElementById('finishBtn').style.display = (index === totalGuests - 1) ? 'inline-flex' : 'none';
+                
+                // Scroll to top of form
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            showGuestSection(currentGuest);
+
+            document.getElementById('nextGuestBtn').addEventListener('click', function () {
+                const faceInput = document.getElementById(`face_data_${currentGuest}`);
+                const nameInput = document.getElementById(`guest_name_${currentGuest}`);
+                const messageElement = document.getElementById(`message_${currentGuest}`);
+                let valid = true;
+
+                if (!nameInput.value.trim()) {
+                    messageElement.textContent = 'Please enter the guest name.';
+                    valid = false;
+                } else if (!faceInput.value) {
+                    messageElement.textContent = 'Please capture a face for this guest.';
+                    valid = false;
+                } else {
+                    messageElement.textContent = '';
+                }
+
+                if (!valid) {
+                    // Add error animation
+                    messageElement.classList.add('animate__animated', 'animate__headShake');
+                    setTimeout(() => {
+                        messageElement.classList.remove('animate__animated', 'animate__headShake');
+                    }, 1000);
+                    return;
+                }
+
+                currentGuest++;
+                showGuestSection(currentGuest);
+            });
+
+            // Validate all on submit
+            document.getElementById('attendeeForm').addEventListener('submit', function (e) {
+                let isValid = true;
+                let invalidFields = [];
+                
+                for (let i = 0; i < totalGuests; i++) {
+                    const faceInput = document.getElementById(`face_data_${i}`);
+                    const nameInput = document.getElementById(`guest_name_${i}`);
+                    const messageElement = document.getElementById(`message_${i}`);
+                    
+                    if (!nameInput.value.trim() || !faceInput.value) {
+                        isValid = false;
+                        invalidFields.push(i);
+                        if (messageElement) {
+                            messageElement.textContent = 'Please complete both name and face capture.';
+                        }
+                    } else {
+                        if (messageElement) messageElement.textContent = '';
+                    }
+                }
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    // Show the first invalid guest section
+                    currentGuest = invalidFields[0];
+                    showGuestSection(currentGuest);
+                    
+                    // Show a toast notification
+                    const toast = document.createElement('div');
+                    toast.style.position = 'fixed';
+                    toast.style.bottom = '100px';
+                    toast.style.left = '50%';
+                    toast.style.transform = 'translateX(-50%)';
+                    toast.style.backgroundColor = '#ef4444';
+                    toast.style.color = 'white';
+                    toast.style.padding = '12px 24px';
+                    toast.style.borderRadius = '8px';
+                    toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                    toast.style.zIndex = '2000';
+                    toast.style.animation = 'fadeIn 0.3s';
+                    toast.textContent = 'Please complete all guest information before submitting.';
+                    
+                    document.body.appendChild(toast);
+                    
+                    setTimeout(() => {
+                        toast.style.animation = 'fadeOut 0.3s';
+                        setTimeout(() => {
+                            document.body.removeChild(toast);
+                        }, 300);
+                    }, 3000);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -165,10 +165,12 @@ def user_dashboard_view(request):
 
 @login_required
 def view_profile(request):
-    return render(request, 'users/view_profile.html', {'user': request.user})
+    notifications = request.user.notifications.filter(is_read=False).order_by('-created_at')[:5]
+    return render(request, 'users/view_profile.html', {'user': request.user, 'notifications': notifications})
 
 @login_required
 def update_profile(request):
+    notifications = request.user.notifications.filter(is_read=False).order_by('-created_at')[:5]
     if request.method == 'POST':
         form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
@@ -178,7 +180,7 @@ def update_profile(request):
     else:
         form = ProfileUpdateForm(instance=request.user)
     
-    context = {'form': form,}
+    context = {'form': form, 'notifications': notifications}
     return render(request, 'users/update_profile.html', context)
 
 
@@ -218,6 +220,7 @@ face_cascade = cv2.CascadeClassifier(HAAR_CASCADE_PATH)
 
 @login_required
 def capture_face(request):
+    notifications = request.user.notifications.filter(is_read=False).order_by('-created_at')[:5]
     if request.method == 'POST':
         # Check if user already has a face embedding
         if FaceEmbedding.objects.filter(user=request.user).exists():
@@ -313,7 +316,7 @@ def capture_face(request):
                 'message': f'An error occurred: {str(e)}'
             }, status=500)
     
-    return render(request, 'users/face_capture.html')
+    return render(request, 'users/face_capture.html', {'notifications': notifications})
 
 
 @login_required

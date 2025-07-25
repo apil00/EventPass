@@ -1,4 +1,3 @@
-# recognition/views.py
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 import cv2
@@ -9,7 +8,7 @@ import io
 import base64
 import os
 from users.models import FaceEmbedding
-from events.models import Ticket, Event
+from events.models import Ticket, Event, Attendee
 from users.models import CustomUser
 from django.utils import timezone
 
@@ -64,7 +63,7 @@ def recognize(request):
 
         input_embedding = embeddings[0]
 
-        # Compare with stored embeddings
+        # 1. Try to match with registered users (FaceEmbedding)
         all_embeddings = FaceEmbedding.objects.all()
         min_distance = float('inf')
         recognized_user = None
@@ -77,44 +76,80 @@ def recognize(request):
                 recognized_user = emb.user
 
         if recognized_user:
-            ticket = Ticket.objects.filter(
-                user=recognized_user,
-                event_id=event_id,
-                payment_status='completed'
+            # Find attendee for this user and event
+            attendee = Attendee.objects.filter(
+                ticket__event_id=event_id,
+                is_user=True,
+                user=recognized_user
             ).first()
-            if ticket:
-                if ticket.checked_in:
+            if attendee:
+                if attendee.checked_in:
                     return JsonResponse({
                         'status': 'error',
                         'message': 'Ticket already used!',
                         'detected_face': detected_face_base64
                     })
-                ticket.checked_in = True
-                ticket.checked_in_method = 'face'
-                ticket.checked_in_time = timezone.now()
-                ticket.save()
+                attendee.checked_in = True
+                attendee.checked_in_method = 'face'
+                attendee.checked_in_time = timezone.now()
+                attendee.save()
                 return JsonResponse({
                     'status': 'success',
                     'message': f'Recognized as {recognized_user.get_full_name()}',
-                    'detected_face': detected_face_base64,
                     'user_details': {
                         'full_name': recognized_user.get_full_name(),
                         'email': recognized_user.email,
+                        'photo': '',  # Optionally add profile photo
                     },
                     'event_details': {
-                        'name': ticket.event.name,
-                        'date': ticket.event.start_date_time.strftime('%Y-%m-%d'),
-                        'location': ticket.event.location,
+                        'name': attendee.ticket.event.name,
+                        'date': attendee.ticket.event.start_date_time.strftime('%Y-%m-%d'),
+                        'location': attendee.ticket.event.location,
                     },
-                    'ticket_status': 'Valid'
+                    'ticket_status': 'Valid',
+                    'detected_face': detected_face_base64
                 })
             else:
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'No valid ticket for this event',
+                    'message': 'No valid attendee record for this event',
                     'detected_face': detected_face_base64
                 })
         else:
+            # 2. Try to match with guests (Attendee with face_embedding)
+            attendees = Attendee.objects.filter(
+                ticket__event_id=event_id,
+                checked_in=False,
+                is_user=False,
+                face_embedding__isnull=False
+            )
+            for attendee in attendees:
+                guest_embedding = np.array(attendee.face_embedding)
+                distance = np.linalg.norm(input_embedding - guest_embedding)
+                if distance < 0.6:  # Same threshold
+                    # Mark as checked in and delete face embedding
+                    attendee.checked_in = True
+                    attendee.checked_in_method = 'face'
+                    attendee.checked_in_time = timezone.now()
+                    attendee.face_embedding = None
+                    attendee.save()
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': f'Guest recognized: {attendee.full_name}',
+                        'user_details': {
+                            'full_name': attendee.full_name,
+                            'email': attendee.ticket.user.email if attendee.ticket and attendee.ticket.user else '',
+                            'purchased_by': attendee.ticket.user.get_full_name() if attendee.ticket and attendee.ticket.user else '',
+                        },
+                        'event_details': {
+                            'name': attendee.ticket.event.name,
+                            'date': attendee.ticket.event.start_date_time.strftime('%Y-%m-%d'),
+                            'location': attendee.ticket.event.location,
+                        },
+                        'ticket_status': 'Valid',
+                        'detected_face': detected_face_base64
+                    })
+            # If no match found
             return JsonResponse({
                 'status': 'error',
                 'message': 'Face not recognized',
@@ -132,44 +167,76 @@ def recognize(request):
         except Event.DoesNotExist:
             return redirect('select_event')
         return render(request, 'recognition/recognize.html', {'event_id': event_id, 'event_name': event_name})
-    
+
 def qr_checkin(request):
     if request.method == 'POST':
         qr_code = request.POST.get('qr_code')
         event_id = request.POST.get('event_id')
-        try:
-            ticket = Ticket.objects.get(qr_code_value=qr_code, event_id=event_id, payment_status='completed')
-            if ticket.checked_in:
-                return JsonResponse({'status': 'error', 'message': 'Ticket already used!'})
-            ticket.checked_in = True
-            ticket.checked_in_method = 'qr'
-            ticket.checked_in_time = timezone.now()
-            ticket.save()
-
-            # Get user's profile picture if exists
-            encoded_photo = None
-            if ticket.user.profile_picture:
-                try:
-                    with ticket.user.profile_picture.open('rb') as image_file:
-                        encoded_photo = base64.b64encode(image_file.read()).decode('utf-8')
-                except Exception as e:
-                    print(f"Error processing profile picture: {e}")
-
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Entry Granted!',
-                'user_details': {
-                    'full_name': ticket.user.get_full_name(),
-                    'email': ticket.user.email,
-                    'profile_picture': encoded_photo
-                },
-                'event_details': {
-                    'name': ticket.event.name,
-                    'date': ticket.event.start_date_time.strftime('%Y-%m-%d'),
-                    'location': ticket.event.location,
-                },
-                'ticket_status': 'Valid'
-            })
-        except Ticket.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Invalid or already used QR code!'})
+        # 1. Try user ticket QR (legacy, for backward compatibility)
+        ticket = Ticket.objects.filter(qr_code_value=qr_code, event_id=event_id, payment_status='completed').first()
+        if ticket:
+            # Find attendee for this user and event
+            attendee = Attendee.objects.filter(ticket=ticket, is_user=True, user=ticket.user).first()
+            if attendee:
+                if attendee.checked_in:
+                    return JsonResponse({'status': 'error', 'message': 'Ticket already used!'})
+                attendee.checked_in = True
+                attendee.checked_in_method = 'qr'
+                attendee.checked_in_time = timezone.now()
+                attendee.save()
+                # Get user's profile picture if exists
+                encoded_photo = None
+                if ticket.user.profile_picture:
+                    try:
+                        with ticket.user.profile_picture.open('rb') as image_file:
+                            encoded_photo = base64.b64encode(image_file.read()).decode('utf-8')
+                    except Exception as e:
+                        print(f"Error processing profile picture: {e}")
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Entry Granted!',
+                    'user_details': {
+                        'full_name': ticket.user.get_full_name(),
+                        'email': ticket.user.email,
+                        'profile_picture': encoded_photo
+                    },
+                    'event_details': {
+                        'name': ticket.event.name,
+                        'date': ticket.event.start_date_time.strftime('%Y-%m-%d'),
+                        'location': ticket.event.location,
+                    },
+                    'ticket_status': 'Valid'
+                })
+            else:
+                return JsonResponse({'status': 'error', 'message': 'No attendee record found for this ticket!'})
+        else:
+            # 2. Try attendee QR (user or guest)
+            attendee = Attendee.objects.filter(qr_code_value=qr_code, ticket__event_id=event_id).first()
+            if attendee:
+                if attendee.checked_in:
+                    return JsonResponse({'status': 'error', 'message': 'Ticket already used!'})
+                attendee.checked_in = True
+                attendee.checked_in_method = 'qr'
+                attendee.checked_in_time = timezone.now()
+                if not attendee.is_user:
+                    attendee.face_embedding = None
+                attendee.save()
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Entry Granted!',
+                    'user_details': {
+                        'full_name': attendee.full_name,
+                        'email': attendee.ticket.user.email if attendee.ticket and attendee.ticket.user else '',
+                        'purchased_by': attendee.ticket.user.get_full_name() if attendee.ticket and attendee.ticket.user else '',
+                        'profile_picture': '',  # You can add if you want
+                    },
+                    'event_details': {
+                        'name': attendee.ticket.event.name,
+                        'date': attendee.ticket.event.start_date_time.strftime('%Y-%m-%d'),
+                        'location': attendee.ticket.event.location,
+                    },
+                    'ticket_status': 'Valid'
+                })
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Invalid or already used QR code!'})
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})

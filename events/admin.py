@@ -114,7 +114,7 @@ class EventAdmin(admin.ModelAdmin):
                 Notification.objects.create(
                     user=user,
                     message=f"New {obj.get_category_display()} event: {obj.name}",
-                    url=reverse('event_detail', args=[obj.pk])
+                    url=reverse('event_list')
                 )
                 
                 # Send email notification
@@ -134,7 +134,7 @@ class EventAdmin(admin.ModelAdmin):
         Location: {event.location}
         Date: {event.start_date_time.strftime('%b %d, %Y')}
         
-        Check it out here: {settings.SITE_URL}{reverse('event_detail', args=[event.pk])}
+        Check it out here: {settings.SITE_URL}{reverse('event_list')}
         """
         
         send_mail(
@@ -162,7 +162,7 @@ class EventAdmin(admin.ModelAdmin):
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
     list_display = (
-        'user', 'event', 'ticket_type', 'payment_status', 'checked_in', 'checked_in_method', 'checked_in_time',
+        'user', 'event', 'ticket_type', 'attendee_count', 'payment_status', 'checked_in', 'checked_in_method', 'checked_in_time',
     )
     list_filter = ('event', 'ticket_type', 'payment_status', 'checked_in')
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'event__name')
@@ -206,6 +206,10 @@ class TicketAdmin(admin.ModelAdmin):
         return response
     export_as_csv.short_description = "Export Selected as CSV"
 
+    def attendee_count(self, obj):
+        return obj.attendees.count()
+    attendee_count.short_description = 'Attendees'
+
 from django.contrib import admin
 from django.urls import path
 from django.shortcuts import render
@@ -245,3 +249,46 @@ class RecommendationFeedbackAdmin(admin.ModelAdmin):
             **self.admin_site.each_context(request)
         }
         return render(request, 'admin/recommendation_stats.html', context)
+    
+from .models import Attendee
+
+@admin.register(Attendee)
+class AttendeeAdmin(admin.ModelAdmin):
+    list_display = (
+        'full_name', 'is_user', 'get_purchaser', 'get_purchaser_email', 'event', 'checked_in', 'checked_in_method', 'checked_in_time'
+    )
+    list_filter = ('is_user', 'checked_in', 'checked_in_method', 'ticket__event')
+    search_fields = ('full_name', 'ticket__user__email', 'ticket__user__first_name', 'ticket__user__last_name', 'ticket__event__name')
+    readonly_fields = ('qr_code', 'checked_in', 'checked_in_method', 'checked_in_time')
+    actions = ['export_attendees_csv']
+
+    def event(self, obj):
+        return obj.ticket.event
+
+    def get_purchaser(self, obj):
+        return obj.ticket.user.get_full_name() if obj.ticket and obj.ticket.user else ''
+    get_purchaser.short_description = 'Purchased By'
+
+    def get_purchaser_email(self, obj):
+        return obj.ticket.user.email if obj.ticket and obj.ticket.user else ''
+    get_purchaser_email.short_description = 'Purchaser Email'
+
+    def export_attendees_csv(self, request, queryset):
+        field_names = ['full_name', 'is_user', 'get_purchaser', 'get_purchaser_email', 'event', 'checked_in', 'checked_in_method', 'checked_in_time']
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename=attendees_report.csv'
+        writer = csv.writer(response)
+        writer.writerow(field_names)
+        for obj in queryset:
+            writer.writerow([
+                obj.full_name,
+                obj.is_user,
+                self.get_purchaser(obj),
+                self.get_purchaser_email(obj),
+                obj.ticket.event,
+                obj.checked_in,
+                obj.checked_in_method,
+                obj.checked_in_time,
+            ])
+        return response
+    export_attendees_csv.short_description = "Export Selected Attendees as CSV"

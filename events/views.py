@@ -86,34 +86,82 @@ def event_list(request):
         messages.info(request, "Please register your face before viewing events")
         return redirect('capture_face')
     
+    notifications = request.user.notifications.filter(is_read=False).order_by('-created_at')[:5]
+    
     now = timezone.now()
     # Get upcoming events (start_date_time > now)
     upcoming_events = Event.objects.filter(start_date_time__gt=now).order_by('start_date_time')
     # Get live and ended events (start_date_time <= now)
     live_ended_events = Event.objects.filter(start_date_time__lte=now).order_by('-start_date_time')
-    return render(request, 'events/event_list.html', {'upcoming_events': upcoming_events,'live_ended_events': live_ended_events, 'events': list(upcoming_events) + list(live_ended_events),})
+    return render(request, 'events/event_list.html', {'upcoming_events': upcoming_events,'live_ended_events': live_ended_events, 'events': list(upcoming_events) + list(live_ended_events), 'notifications': notifications})
 
+from .forms import MultiTicketBookingForm
 @login_required
 def ticket_booking(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
-
-    # check if event has ended
-    if event.get_status() == 'Ended':
-        messages.error(request, "This event has already ended.")
-        return redirect('event_list')
-    
-    # Handle ticket type selection
+    notifications = request.user.notifications.filter(is_read=False).order_by('-created_at')[:5]
     if request.method == 'POST':
-        ticket_type = request.POST.get('ticket_type')
-        if not ticket_type:
-            messages.error(request, "Please select a ticket type")
-            return render(request, 'events/ticket_booking.html', {'event': event})
-        
-        request.session['selected_ticket_type'] = ticket_type
-        return redirect('confirm_ticket', event_id=event_id)
-    
+        form = MultiTicketBookingForm(request.POST)
+        if form.is_valid():
+            ticket_type = form.cleaned_data['ticket_type']
+            for_self = form.cleaned_data['for_self']
+            for_others = form.cleaned_data['for_others']
+            others_quantity = form.cleaned_data['others_quantity'] if form.cleaned_data['for_others'] else 0
 
-    return render(request, 'events/ticket_booking.html', {'event': event})
+            if not for_self and not for_others:
+                form.add_error(None, "Select at least one: For Myself or For Others")
+            elif for_others and not others_quantity:
+                form.add_error('others_quantity', "Specify number of guests")
+            else:
+                request.session['booking'] = {
+                    'ticket_type': ticket_type,
+                    'for_self': for_self,
+                    'for_others': for_others,
+                    'others_quantity': others_quantity or 0,
+                }
+                # If guests, go to guest face registration
+                if for_others and others_quantity:
+                    return redirect('register_guest_faces', event_id=event_id)
+                # If only self, go to confirm
+                return redirect('confirm_ticket', event_id=event_id)
+    else:
+        form = MultiTicketBookingForm()
+    return render(request, 'events/ticket_booking.html', {'event': event, 'form': form, 'notifications': notifications})
+
+import base64
+import numpy as np
+import face_recognition
+from PIL import Image
+import io
+
+@login_required
+def register_guest_faces(request, event_id):
+    booking = request.session.get('booking')
+    if not booking or not booking.get('for_others'):
+        return redirect('ticket_booking', event_id=event_id)
+    guest_count = booking.get('others_quantity', 0)
+    if request.method == 'POST':
+        guest_data = []
+        for i in range(guest_count):
+            name = request.POST.get(f'guest_name_{i}')
+            face_data = request.POST.get(f'face_{i}')
+            embedding = None
+            if face_data and ',' in face_data:
+                image_data = face_data.split(',')[1]
+                image_bytes = base64.b64decode(image_data)
+                image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+                image_array = np.array(image)
+                embeddings = face_recognition.face_encodings(image_array)
+                if embeddings:
+                    embedding = embeddings[0].tolist()
+            guest_data.append({
+                'full_name': name,
+                'face_embedding': embedding,
+            })
+        request.session['guest_data'] = guest_data
+        return redirect('confirm_ticket', event_id=event_id)
+    forms = [{'index': i} for i in range(guest_count)]
+    return render(request, 'events/register_guest_faces.html', {'forms': forms, 'guest_count': guest_count})
 
 # -- eSewa payment configuration--
 ESEWA_CONFIG = {
@@ -140,84 +188,96 @@ def generate_esewa_signature(data):
 @login_required
 def confirm_ticket(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
-    selected_ticket_type = request.session.get('selected_ticket_type')
-
-    # validate ticket type
-    if  not selected_ticket_type:
-        messages.error(request, "Please select a ticket type first.")
+    booking = request.session.get('booking')
+    if not booking:
         return redirect('ticket_booking', event_id=event_id)
-    
-    # In confirm_ticket view:
+
+    ticket_type = booking['ticket_type']
+    for_self = booking['for_self']
+    for_others = booking['for_others']
+    others_quantity = booking['others_quantity']
+
     price_tiers = dict((k.lower(), v) for k, v in event.get_price_tiers())
+    price = price_tiers[ticket_type]
+    total_tickets = (1 if for_self else 0) + (others_quantity if for_others else 0)
+    total_price = price * total_tickets
 
-    if selected_ticket_type not in price_tiers:
-        messages.error(request, "Invalid ticket type selected.")
-        return redirect('ticket_booking', event_id=event_id)
-    
-    price = price_tiers[selected_ticket_type]
+    # Prepare attendee preview
+    attendees = []
+    if for_self:
+        attendees.append({
+            'full_name': request.user.get_full_name(),
+            'is_user': True,
+        })
+    if for_others and others_quantity:
+        guest_data = request.session.get('guest_data', [])
+        for guest in guest_data:
+            attendees.append({
+                'full_name': guest['full_name'],
+                'is_user': False,
+            })
 
-    # Remove any previous pending/failed ticket for this user and event
-    Ticket.objects.filter(user=request.user, event=event).exclude(payment_status='completed').delete()
-
-    # Prevent duplicate ticket for the same user and event
-    if Ticket.objects.filter(user=request.user, event=event, payment_status='completed').exists():
-        messages.error(request, "You have already purchased a ticket for this event.")
-        return redirect('event_list')
-
-    # Create ticket in PENDING state before payment
-    ticket = Ticket.objects.create(
-        user=request.user,
-        event=event,
-        ticket_type=selected_ticket_type,
-        price=price,
-        payment_method='esewa',
-        payment_status='pending'
-    )
-
-    # Prepare payment data for both GET and POST requests
-    transaction_uuid = str(uuid.uuid4())
-    payment_data = {
-        'amount': str(price),
-        'tax_amount': '0',
-        'total_amount': str(price),
-        'transaction_uuid': transaction_uuid,
-        'product_code': ESEWA_CONFIG['merchant_code'],
-        'product_service_charge': '0',
-        'product_delivery_charge': '0',
-        'success_url': request.build_absolute_uri(reverse('esewa_success')),
-        'failure_url': request.build_absolute_uri(reverse('esewa_failure')),
-        'signed_field_names': 'total_amount,transaction_uuid,product_code',
-    }
-    payment_data['signature'] = generate_esewa_signature(payment_data)
-
-    # Store ticket ID in session for later retrieval
-    request.session['current_ticket_id'] = ticket.id
-    request.session['current_transaction'] = {
-        'event_id': event_id,
-        'ticket_type': selected_ticket_type,
-        'price': str(price),
-        'transaction_uuid': transaction_uuid,
-    }
-
-    context = {
-        'event': event,
-        'type': selected_ticket_type.title(),
-        'price': price,
-        'payment_data': payment_data,
-    }
-
-    # Handle payment submission
     if request.method == 'POST':
-        # Render the payment form with auto-submit
+        # Create Ticket (purchase)
+        ticket = Ticket.objects.create(
+            user=request.user,
+            event=event,
+            ticket_type=ticket_type,
+            price=total_price,
+            payment_method='esewa',
+            payment_status='pending'
+        )
+        request.session['current_ticket_id'] = ticket.id
+        request.session['attendee_info'] = {
+            'for_self': for_self,
+            'for_others': for_others,
+            'others_quantity': others_quantity,
+        }
+
+        # Prepare eSewa payment data
+        import uuid
+        from django.urls import reverse
+        transaction_uuid = str(uuid.uuid4())
+        payment_data = {
+            'amount': str(total_price),
+            'tax_amount': '0',
+            'total_amount': str(total_price),
+            'transaction_uuid': transaction_uuid,
+            'product_code': ESEWA_CONFIG['merchant_code'],
+            'product_service_charge': '0',
+            'product_delivery_charge': '0',
+            'success_url': request.build_absolute_uri(reverse('esewa_success')),
+            'failure_url': request.build_absolute_uri(reverse('esewa_failure')),
+            'signed_field_names': 'total_amount,transaction_uuid,product_code',
+        }
+        payment_data['signature'] = generate_esewa_signature(payment_data)
+
+        # Store transaction in session for later verification
+        request.session['current_transaction'] = {
+            'event_id': event_id,
+            'ticket_type': ticket_type,
+            'price': str(total_price),
+            'transaction_uuid': transaction_uuid,
+        }
+
+        # Render the eSewa payment form (auto-submit)
         return render(request, 'events/esewa_payment.html', {
             'payment_data': payment_data,
             'esewa_url': ESEWA_CONFIG['test_url'],
         })
 
+    context = {
+        'event': event,
+        'type': ticket_type.title(),
+        'price': price,
+        'total_tickets': total_tickets,
+        'total_price': total_price,
+        'attendees': attendees,
+    }
     return render(request, 'events/confirm_ticket.html', context)
 
 
-
+from .models import Attendee
 @login_required
 def esewa_payment_success(request):
     # Handle both GET and POST
@@ -258,9 +318,8 @@ def esewa_payment_success(request):
         ticket = Ticket.objects.get(id=ticket_id)
         
         # Verify payment amount
-        # Remove commas before converting to float
         received_amount = payment_data.get('total_amount', '0').replace(',', '')
-        ticket_price = str(ticket.price).replace(',', '')  # Just in case ticket price also has commas
+        ticket_price = str(ticket.price).replace(',', '')
 
         if float(received_amount) != float(ticket_price):
             print(f"Amount mismatch: {received_amount} vs {ticket_price}")
@@ -277,22 +336,59 @@ def esewa_payment_success(request):
             'raw_response': payment_data
         }
         ticket.save()
-        #print(f"Ticket {ticket_id} marked as completed")
+
+        # --- NEW: Create Attendees for self and guests ---
+        attendee_info = request.session.get('attendee_info', {})
+        for_self = attendee_info.get('for_self')
+        for_others = attendee_info.get('for_others')
+        others_quantity = attendee_info.get('others_quantity', 0)
+
+        created_attendees = []
+
+        # For self
+        if for_self:
+            created_attendees.append(
+                Attendee.objects.create(
+                    ticket=ticket,
+                    full_name=request.user.get_full_name(),
+                    is_user=True,
+                    user=request.user,
+                    qr_code_value=str(uuid.uuid4()),
+                )
+            )
+
+        # For guests
+        if for_others and others_quantity > 0:
+            guest_data = request.session.get('guest_data', [])
+            for guest in guest_data:
+                created_attendees.append(
+                    Attendee.objects.create(
+                        ticket=ticket,
+                        full_name=guest['full_name'],
+                        is_user=False,
+                        face_embedding=guest['face_embedding'],
+                        qr_code_value=str(uuid.uuid4()),
+                    )
+                )
+
+        # --- END NEW ---
 
         send_ticket_email(request.user, ticket)
         
         Notification.objects.create(
-        user=request.user,
-        message=f"Your payment for {ticket.event.name} was successful! Your ticket is ready.",
-        url=reverse('ticket_detail', args=[ticket.id])
-    )
+            user=request.user,
+            message=f"Your payment for {ticket.event.name} was successful! Your ticket is ready.",
+            url=reverse('ticket_detail', args=[ticket.id])
+        )
 
         # Clear session
-        request.session.pop('current_ticket_id', None)
-        request.session.pop('current_transaction', None)
+        for key in ['current_ticket_id', 'current_transaction', 'attendee_info', 'guest_data', 'booking']:
+            if key in request.session:
+                del request.session[key]
 
         return render(request, 'events/payment_success.html', {
             'ticket': ticket,
+            'attendees': created_attendees,
             'transaction_uuid': payment_data.get('transaction_uuid'),
             'amount': payment_data.get('total_amount')
         })
@@ -342,6 +438,7 @@ def esewa_payment_failure(request):
 # -- Ticket list view --
 @login_required
 def my_tickets(request):
+    notifications = request.user.notifications.filter(is_read=False).order_by('-created_at')[:5]
     # Get all tickets for the current user, ordered by event date
     tickets = Ticket.objects.filter(user=request.user, payment_status='completed').order_by('-event__start_date_time')
     
@@ -354,17 +451,19 @@ def my_tickets(request):
             ticket.status = 'upcoming'
         else:
             ticket.status = 'active'
-    
-    return render(request, 'events/my_tickets.html', {'tickets': tickets})
+        ticket.attendees_list = ticket.attendees.all()
+    return render(request, 'events/my_tickets.html', {'tickets': tickets, 'notifications': notifications})
 
 # -- Ticket detail view --
 @login_required
 def ticket_detail(request, ticket_id):
+    notifications = request.user.notifications.filter(is_read=False).order_by('-created_at')[:5]
     ticket = get_object_or_404(Ticket, pk=ticket_id, user=request.user)
     if ticket.payment_status != 'completed':
         messages.error(request, "Ticket is not available until payment is completed.")
         return redirect('event_list')
-    return render(request, 'events/ticket_detail.html', {'ticket': ticket})
+    attendees = ticket.attendees.all()
+    return render(request, 'events/ticket_detail.html', {'ticket': ticket, 'attendees': attendees, 'notifications': notifications})
 
 def download_ticket(request, ticket_id):
     ticket = get_object_or_404(Ticket, pk=ticket_id, user=request.user)

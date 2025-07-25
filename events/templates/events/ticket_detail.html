@@ -12,39 +12,44 @@
     <style>
         :root {
             --primary: #6f42c1;
-            --primary-light: #f3effb;
+            --primary-light: #f5f3ff;
+            --secondary-color: #8e44ad;
+            --text-dark: #2d3748;
+            --text-medium: #4a5568;
+            --text-light: #718096;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
         body {
             font-family: 'Poppins', sans-serif;
             background-color: #f8f9fa;
-            padding-bottom: 70px;
+            padding-bottom: 80px;
+            color: var(--text-dark);
         }
 
+        /* Navbar Styles */
         .navbar {
             background-color: #fff;
-            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--shadow-sm);
+            padding: 0.75rem 1rem;
         }
 
-        .navbar .fw-bold {
-            font-family: 'Poppins', sans-serif;
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            color: var(--primary);
         }
 
-        .dropdown-menu {
-            width: 200px;
+        .navbar-brand i {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
         }
 
-        .notification-badge {
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            background-color: red;
-            color: white;
-            font-size: 12px;
-            border-radius: 50%;
-            padding: 2px 5px;
-        }
-
+        /* Icon Components */
         .icon-circle {
             width: 42px;
             height: 42px;
@@ -53,40 +58,63 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: var(--transition);
         }
 
-        .icon-group>div {
-            margin-left: 20px;
+        .icon-circle:hover {
+            background-color: var(--primary-light);
+            color: var(--primary);
         }
 
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: #ef4444;
+            color: white;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 50%;
+            padding: 2px 6px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* Bottom Navigation */
         .bottom-nav {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
             background-color: white;
-            border-top: 1px solid #ddd;
+            border-top: 1px solid var(--border-color);
             display: flex;
             justify-content: space-around;
-            padding: 10px 0;
+            padding: 12px 0;
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
         }
 
         .bottom-nav a {
             text-decoration: none;
-            color: #6c757d;
-            font-size: 14px;
+            color: var(--text-light);
+            font-size: 0.75rem;
             display: flex;
             flex-direction: column;
             align-items: center;
+            transition: var(--transition);
+            flex: 1;
+            max-width: 80px;
         }
 
         .bottom-nav a.active {
-            color: #6f42c1;
+            color: var(--primary);
+            transform: translateY(-2px);
         }
 
         .bottom-nav i {
-            font-size: 20px;
+            font-size: 1.25rem;
+            margin-bottom: 4px;
         }
 
         /* Ticket Card Styles */
@@ -197,39 +225,90 @@
 
 <body>
     <!-- Navbar (Same as other pages) -->
-    <nav class="navbar navbar-light px-3 sticky-top shadow-sm">
-        <div class="d-flex justify-content-between align-items-center w-100">
-            <div class="d-flex align-items-center">
-                <i class="bi bi-ticket-fill text-primary fs-3 me-2"></i>
-                <span class="fw-bold fs-5">EventPass</span>
-            </div>
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-ticket-perforated"></i>
+                <span>EventPass</span>
+            </a>
 
             <!-- Notifications & Profile Icons -->
-            <div class="d-flex align-items-center icon-group">
+            <div class="d-flex align-items-center">
                 <!-- Notifications -->
-                <div class="dropdown">
+                <div class="dropdown me-2">
                     <a class="icon-circle position-relative" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-bell text-dark fs-5"></i>
-                        <span class="notification-badge">2</span>
+                        <i class="bi bi-bell fs-5"></i>
+                        {% if notifications|length > 0 %}
+                        <span class="notification-badge">{{ notifications|length }}</span>
+                        {% endif %}
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#">New Event: Hackfest</a></li>
-                        <li><a class="dropdown-item" href="#">Face Verified</a></li>
+                    <ul class="dropdown-menu dropdown-menu-end p-0"
+                        style="width: 320px; max-height: 400px; overflow-y: auto;">
+                        <li class="dropdown-header p-3 border-bottom">
+                            <h6 class="mb-0">Notifications</h6>
+                        </li>
+                        {% for notif in notifications %}
+                        <li>
+                            <a class="dropdown-item{% if not notif.is_read %} fw-bold{% endif %} p-3"
+                                href="{{ notif.url|default:'#' }}">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        {% if notif.type == "booking" %}
+                                        <i class="bi bi-ticket-perforated text-primary"></i>
+                                        {% elif notif.type == "event" %}
+                                        <i class="bi bi-calendar-event text-success"></i>
+                                        {% elif notif.type == "system" %}
+                                        <i class="bi bi-info-circle text-info"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div>{{ notif.message }}</div>
+                                        <small class="text-muted">{{ notif.created_at|timesince }} ago</small>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        {% empty %}
+                        <li class="p-3 text-center text-muted">No notifications</li>
+                        {% endfor %}
+                        <li class="dropdown-footer p-2 border-top text-center">
+                            <a href="#" class="text-primary small">View all notifications</a>
+                        </li>
                     </ul>
                 </div>
 
                 <!-- Profile -->
                 <div class="dropdown">
                     <a class="icon-circle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-person-fill text-dark fs-5"></i>
+                        <i class="bi bi-person-fill fs-5"></i>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#">Profile</a></li>
-                        <li><a class="dropdown-item" href="#">Settings</a></li>
+                        <li class="dropdown-header p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="icon-circle bg-primary-light text-primary">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ request.user.get_full_name }}</h6>
+                                    <small class="text-muted">{{ request.user.email }}</small>
+                                </div>
+                            </div>
+                        </li>
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                        <li><a class="dropdown-item text-danger" href="#">Logout</a></li>
+                        <li><a class="dropdown-item" href="{% url 'view_profile' %}"><i class="bi bi-person me-2"></i>
+                                Profile</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Settings</a></li>
+                        <li><a class="dropdown-item" href="{% url 'my_tickets' %}"><i
+                                    class="bi bi-ticket-perforated me-2"></i> My Tickets</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i
+                                    class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
                     </ul>
                 </div>
             </div>
@@ -259,7 +338,7 @@
                     <div class="col-md-7">
                         <div class="ticket-info">
                             <div class="ticket-info-item">
-                                <span class="ticket-info-label">Ticket Holder</span>
+                                <span class="ticket-info-label">Ticket Purchase By:</span>
                                 <span class="ticket-info-value">{{ ticket.user.get_full_name }}</span>
                             </div>
                             <div class="ticket-info-item">
@@ -293,12 +372,28 @@
 
                     <div class="col-md-5">
                         <div class="ticket-qr">
-                            {% if ticket.qr_code %}
-                                <img src="{{ ticket.qr_code.url }}" alt="Ticket QR Code">
-                                <p class="mt-3 mb-0 small text-muted">Scan this QR code at the event entrance</p>
-                            {% else %}
-                                <div class="alert alert-warning">QR code is being generated. Please refresh in a moment.</div>
-                            {% endif %}
+                            <h6 class="fw-bold mb-3">All Attendee QR Codes</h6>
+
+                            <!-- Add guest QR codes section -->
+                            <div class="mt-4">
+
+                                <div class="row">
+                                    {% for attendee in attendees %}
+                                    <div class="col-6 mb-3">
+                                        <div class="text-center">
+                                            <h6 class="fw-bold small mb-1">{{ attendee.full_name }}{% if attendee.is_user %}(You){% endif %}</h6>
+                                            {% if attendee.qr_code %}
+                                            <img src="{{ attendee.qr_code.url }}" alt="QR Code" class="img-fluid"
+                                                style="max-width: 120px;">
+                                            {% else %}
+                                            <div class="alert alert-warning small">QR code being generated</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                    <p class="mt-3 mb-0 small text-muted">Scan this QR code at the event entrance</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -342,7 +437,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Simple script to handle ticket download
-        document.querySelector('.btn-download').addEventListener('click', function() {
+        document.querySelector('.btn-download').addEventListener('click', function () {
             // This would need to be implemented with a proper view to generate a PDF
             alert('Ticket download initiated.');
         });

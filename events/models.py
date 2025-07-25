@@ -200,9 +200,6 @@ class Ticket(models.Model):
     checked_in_method = models.CharField(max_length=10, choices=[('face', 'Face'), ('qr', 'QR')], null=True, blank=True)
     checked_in_time = models.DateTimeField(null=True, blank=True)
 
-    class Meta:
-        unique_together = ('user', 'event')
-
     def __str__(self):
         return f"{self.user.email} - {self.event.name} ({self.get_ticket_type_display()})"
     
@@ -236,3 +233,46 @@ class Ticket(models.Model):
         # Save to model
         self.qr_code.save(filename, File(buffer), save=False)
         buffer.close()
+
+class Attendee(models.Model):
+    ticket = models.ForeignKey('Ticket', on_delete=models.CASCADE, related_name='attendees')
+    full_name = models.CharField(max_length=100)
+    is_user = models.BooleanField(default=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    face_embedding = models.JSONField(null=True, blank=True)  # For guest, store embedding temporarily
+    qr_code_value = models.CharField(max_length=100, unique=True, default=uuid.uuid4)
+    qr_code = models.ImageField(upload_to='attendees/qr_codes/', blank=True, null=True)
+    checked_in = models.BooleanField(default=False)
+    checked_in_method = models.CharField(max_length=10, choices=[('face', 'Face'), ('qr', 'QR')], null=True, blank=True)
+    checked_in_time = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.full_name} ({'User' if self.is_user else 'Guest'})"
+    
+    def generate_qr_code(self):
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(self.qr_code_value)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        buffer = BytesIO()
+        img.save(buffer, 'PNG')
+        
+        filename = f'attendee_{self.id}_qr.png'
+        
+        self.qr_code.save(filename, File(buffer), save=False)
+        buffer.close()
+    
+    def save(self, *args, **kwargs):
+        if not self.qr_code_value:
+            self.qr_code_value = str(uuid.uuid4())
+        if not self.qr_code:
+            self.generate_qr_code()
+        super().save(*args, **kwargs)
