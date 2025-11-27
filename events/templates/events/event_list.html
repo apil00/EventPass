@@ -302,6 +302,21 @@
             border-color: var(--primary);
             color: white;
         }
+
+        .capacity-breakdown {
+    background-color: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 3px solid var(--primary);
+}
+
+.capacity-breakdown div span:first-child {
+    color: var(--text-medium);
+}
+
+.capacity-breakdown div span:last-child {
+    font-weight: 500;
+}
     </style>
 </head>
 
@@ -559,6 +574,36 @@
                         <div class="event-detail-item">
                             <div class="detail-label"><i class="bi bi-tag me-2"></i>Category</div>
                             <div class="detail-value">{{ event.get_category_display }}</div>
+                        </div>
+
+                        <div class="event-detail-item">
+                            <div class="detail-label"><i class="bi bi-people me-2"></i>Capacity</div>
+                            <div class="detail-value">
+                                <div class="mb-1">
+                                    <strong>Total Capacity:</strong> {{ event.total_capacity }} seats
+                                    ({{ event.total_available }} available)
+                                </div>
+                                {% if not event.is_free %}
+                                <div class="capacity-breakdown mt-2">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span><strong>General:</strong></span>
+                                        <span>{{ event.general_available }} of {{ event.general_seats }} available</span>
+                                    </div>
+                                    {% if event.vip_seats > 0 %}
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span><strong>VIP:</strong></span>
+                                        <span>{{ event.vip_available }} of {{ event.vip_seats }} available</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if event.vvip_seats > 0 %}
+                                    <div class="d-flex justify-content-between">
+                                        <span><strong>VVIP:</strong></span>
+                                        <span>{{ event.vvip_available }} of {{ event.vvip_seats }} available</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
 
                         <div class="event-detail-item">

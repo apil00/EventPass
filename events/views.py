@@ -108,10 +108,13 @@ def ticket_booking(request, event_id):
             for_others = form.cleaned_data['for_others']
             others_quantity = form.cleaned_data['others_quantity'] if form.cleaned_data['for_others'] else 0
 
-            if not for_self and not for_others:
-                form.add_error(None, "Select at least one: For Myself or For Others")
-            elif for_others and not others_quantity:
-                form.add_error('others_quantity', "Specify number of guests")
+            total_requested = (1 if for_self else 0) + (others_quantity or 0)
+            available_seats = event.get_available_seats(ticket_type)
+
+            if total_requested > available_seats:
+                messages.error(request, 
+            f"Not enough {ticket_type.upper()} seats available. Only {available_seats} remaining."
+                )
             else:
                 request.session['booking'] = {
                     'ticket_type': ticket_type,
@@ -139,29 +142,112 @@ def register_guest_faces(request, event_id):
     booking = request.session.get('booking')
     if not booking or not booking.get('for_others'):
         return redirect('ticket_booking', event_id=event_id)
+    
     guest_count = booking.get('others_quantity', 0)
+    
     if request.method == 'POST':
         guest_data = []
+        existing_embeddings = []
+        has_errors = False
+        
+        # Clear any old messages
+        storage = messages.get_messages(request)
+        storage.used = True
+        
         for i in range(guest_count):
-            name = request.POST.get(f'guest_name_{i}')
+            name = request.POST.get(f'guest_name_{i}', '').strip()
             face_data = request.POST.get(f'face_{i}')
-            embedding = None
-            if face_data and ',' in face_data:
+            
+            # Validate name
+            if not name:
+                messages.error(request, f"Guest {i+1}: Name is required")
+                has_errors = True
+                continue
+                
+            if len(name) < 2 or len(name) > 50:
+                messages.error(request, f"Guest {i+1}: Name must be 2-50 characters")
+                has_errors = True
+                continue
+                
+            # Validate face data
+            if not face_data:
+                messages.error(request, f"Guest {i+1}: Face capture is required")
+                has_errors = True
+                continue
+                
+            try:
+                # Process image
+                if ',' not in face_data:
+                    messages.error(request, f"Guest {i+1}: Invalid image data")
+                    has_errors = True
+                    continue
+                    
                 image_data = face_data.split(',')[1]
                 image_bytes = base64.b64decode(image_data)
                 image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
                 image_array = np.array(image)
-                embeddings = face_recognition.face_encodings(image_array)
-                if embeddings:
-                    embedding = embeddings[0].tolist()
-            guest_data.append({
-                'full_name': name,
-                'face_embedding': embedding,
-            })
-        request.session['guest_data'] = guest_data
-        return redirect('confirm_ticket', event_id=event_id)
+                
+                # Detect faces
+                face_locations = face_recognition.face_locations(image_array)
+                if not face_locations:
+                    messages.error(request, f"Guest {i+1}: No face detected in the image")
+                    has_errors = True
+                    continue
+                    
+                if len(face_locations) > 1:
+                    messages.error(request, f"Guest {i+1}: Only one face should be visible")
+                    has_errors = True
+                    continue
+                    
+                # Get face encoding
+                embeddings = face_recognition.face_encodings(image_array, face_locations)
+                if not embeddings:
+                    messages.error(request, f"Guest {i+1}: Could not process facial features")
+                    has_errors = True
+                    continue
+                    
+                # Check for duplicate faces
+                for existing in existing_embeddings:
+                    match = face_recognition.compare_faces([existing], embeddings[0], tolerance=0.6)
+                    if match[0]:
+                        messages.error(request, f"Guest {i+1}: This face is already registered")
+                        has_errors = True
+                        break
+                
+                if has_errors:
+                    continue
+                    
+                # If all validations passed
+                guest_data.append({
+                    'full_name': name,
+                    'face_embedding': embeddings[0].tolist(),
+                })
+                existing_embeddings.append(embeddings[0])
+                
+            except Exception as e:
+                messages.error(request, f"Guest {i+1}: Error processing image - please try again")
+                has_errors = True
+                continue
+        
+        if not has_errors and guest_data:
+            request.session['guest_data'] = guest_data
+            return redirect('confirm_ticket', event_id=event_id)
+        
+        # If errors, preserve form data
+        forms = [{'index': i} for i in range(guest_count)]
+        context = {
+            'forms': forms,
+            'guest_count': guest_count,
+            'preserved_data': request.POST
+        }
+        return render(request, 'events/register_guest_faces.html', context)
+    
+    # GET request
     forms = [{'index': i} for i in range(guest_count)]
-    return render(request, 'events/register_guest_faces.html', {'forms': forms, 'guest_count': guest_count})
+    return render(request, 'events/register_guest_faces.html', {
+        'forms': forms,
+        'guest_count': guest_count
+    })
 
 # -- eSewa payment configuration--
 ESEWA_CONFIG = {

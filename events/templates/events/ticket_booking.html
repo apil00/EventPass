@@ -249,6 +249,14 @@
     <!-- Content -->
     <div class="container py-4">
         <h5 class="mb-4 fw-semibold">🎟️ Book Your Ticket</h5>
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
         <div class="container bg-white p-4 shadow-sm rounded">
             <!-- Event summary -->
             <div class="mb-4">

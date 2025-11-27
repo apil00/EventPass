@@ -52,6 +52,12 @@ class Event(models.Model):
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
     is_featured = models.BooleanField(default=False)
 
+    # capacity and seating
+    total_capacity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], help_text="Total number of attendees allowed")
+    general_seats = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], help_text="Number of general seats available")
+    vip_seats = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], help_text="Number of VIP seats available")
+    vvip_seats = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)], help_text="Number of VVIP seats available")
+
     # Pricing
     is_free = models.BooleanField(default=False)
     general_price = models.DecimalField(
@@ -126,6 +132,13 @@ class Event(models.Model):
                 
             if prices['vvip'] > 0 and prices['vvip'] <= prices['vip']:
                 raise ValidationError("VVIP price must be higher than VIP price")
+            
+            # Validate seating capacity
+            total_allocated = (self.general_seats or 0) + (self.vip_seats or 0) + (self.vvip_seats or 0)
+            if total_allocated > self.total_capacity:
+                raise ValidationError(
+                    f"Total allocated seats ({total_allocated}) cannot exceed event capacity ({self.total_capacity})"
+                )
     
     def get_absolute_url(self):
         return reverse('event_detail', kwargs={'pk': self.pk})
@@ -157,6 +170,49 @@ class Event(models.Model):
         if self.vip_price:
             return f"Rs. {self.general_price} - {self.vip_price}"
         return f"Rs. {self.general_price}"
+    
+    def get_available_seats(self, ticket_type=None):
+        """
+        Returns available seats for the event or specific ticket type
+        """
+        from django.db.models import Count, Q
+        
+        if ticket_type:
+            # Get count of sold tickets for specific type
+            sold = self.tickets.filter(
+                ticket_type=ticket_type,
+                payment_status='completed'
+            ).count()
+            
+            if ticket_type == 'general':
+                return max(0, self.general_seats - sold)
+            elif ticket_type == 'vip':
+                return max(0, self.vip_seats - sold)
+            elif ticket_type == 'vvip':
+                return max(0, self.vvip_seats - sold)
+            return 0
+        else:
+            # Get total available seats
+            total_sold = self.tickets.filter(
+                payment_status='completed'
+            ).count()
+            return max(0, self.total_capacity - total_sold)
+        
+    @property
+    def general_available(self):
+        return self.get_available_seats('general')
+
+    @property
+    def vip_available(self):
+        return self.get_available_seats('vip')
+
+    @property
+    def vvip_available(self):
+        return self.get_available_seats('vvip')
+
+    @property
+    def total_available(self):
+        return self.get_available_seats()
 
     def save(self, *args, **kwargs):
         """Ensure pricing is handled correctly for free events"""
@@ -164,6 +220,15 @@ class Event(models.Model):
             self.general_price = 0
             self.vip_price = None
             self.vvip_price = None
+
+        # Ensure seating allocations are valid
+        if not self.general_seats:
+            self.general_seats = 0
+        if not self.vip_seats:
+            self.vip_seats = 0
+        if not self.vvip_seats:
+            self.vvip_seats = 0
+            
         super().save(*args, **kwargs)
 
 

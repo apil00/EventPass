@@ -55,6 +55,7 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = ('category', 'is_featured', 'start_date_time', 'is_free')
     search_fields = ('name', 'description', 'location')
     list_editable = ('is_featured',)
+    readonly_fields = ('capacity_display', 'seats_available_display')
     
     fieldsets = (
         (None, {
@@ -62,6 +63,12 @@ class EventAdmin(admin.ModelAdmin):
         }),
         ('Event Info', {
             'fields': ('location', 'start_date_time', 'end_date_time', 'category', 'is_featured')
+        }),
+        ('Capacity & Seating', {
+            'fields': ('total_capacity', 'general_seats', 'vip_seats', 'vvip_seats',
+                      'capacity_display', 'seats_available_display'),
+            'classes': ('collapse',),
+            'description': "Manage seating capacity for different ticket types"
         }),
         ('Pricing', {
             'fields': ('is_free', 'general_price', 'vip_price', 'vvip_price'),
@@ -86,6 +93,28 @@ class EventAdmin(admin.ModelAdmin):
             return format_html('<span style="color: green">Free</span>')
         return obj.get_price_display()
     price_display.short_description = 'Price'
+
+    def capacity_display(self, obj):
+        return format_html(
+            'Total: {}<br>General: {}<br>VIP: {}<br>VVIP: {}',
+            obj.total_capacity,
+            obj.general_seats,
+            obj.vip_seats,
+            obj.vvip_seats
+        )
+    capacity_display.short_description = 'Capacity Allocation'
+    capacity_display.allow_tags = True
+    
+    def seats_available_display(self, obj):
+        return format_html(
+            'General: {}<br>VIP: {}<br>VVIP: {}<br>Total: {}',
+            obj.get_available_seats('general'),
+            obj.get_available_seats('vip'),
+            obj.get_available_seats('vvip'),
+            obj.get_available_seats()
+        )
+    seats_available_display.short_description = 'Seats Available'
+    seats_available_display.allow_tags = True
     
     def save_model(self, request, obj, form, change):
     # Existing price handling
